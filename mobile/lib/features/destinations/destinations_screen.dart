@@ -27,6 +27,7 @@ class _DestinationsScreenState extends State<DestinationsScreen> {
   final _dio = buildDio();
   List<dynamic> _destinations = [];
   bool _loading = true;
+  String? _chosenDestId;
 
   @override
   void initState() {
@@ -48,7 +49,25 @@ class _DestinationsScreenState extends State<DestinationsScreen> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => _DestinationSheet(dest: dest),
+      builder: (_) => _DestinationSheet(
+        dest: dest,
+        onChosen: (id) {
+          setState(() => _chosenDestId = id);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Row(
+                children: [
+                  const Icon(Icons.place_rounded, color: Colors.white, size: 18),
+                  const SizedBox(width: 8),
+                  Text('${dest['name']} set as your destination'),
+                ],
+              ),
+              duration: const Duration(seconds: 2),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        },
+      ),
     );
   }
 
@@ -78,6 +97,7 @@ class _DestinationsScreenState extends State<DestinationsScreen> {
                       itemBuilder: (_, i) => _DestCard(
                         dest: _destinations[i] as Map<String, dynamic>,
                         index: i,
+                        isChosen: _chosenDestId == (_destinations[i] as Map<String, dynamic>)['id']?.toString(),
                         onTap: () => _showDetail(_destinations[i] as Map<String, dynamic>),
                       ),
                     ),
@@ -87,10 +107,11 @@ class _DestinationsScreenState extends State<DestinationsScreen> {
 }
 
 class _DestCard extends StatelessWidget {
-  const _DestCard({required this.dest, required this.index, required this.onTap});
+  const _DestCard({required this.dest, required this.index, required this.onTap, this.isChosen = false});
   final Map<String, dynamic> dest;
   final int index;
   final VoidCallback onTap;
+  final bool isChosen;
 
   @override
   Widget build(BuildContext context) {
@@ -103,21 +124,48 @@ class _DestCard extends StatelessWidget {
         decoration: BoxDecoration(
           color: TrailColors.surface,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.white.withOpacity(0.05)),
+          border: Border.all(
+            color: isChosen ? TrailColors.primary.withOpacity(0.6) : Colors.white.withOpacity(0.05),
+            width: isChosen ? 2 : 1,
+          ),
         ),
         clipBehavior: Clip.hardEdge,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Expanded(
-              child: coverUrl != null
-                  ? CachedNetworkImage(
-                      imageUrl: coverUrl,
-                      fit: BoxFit.cover,
-                      width: double.infinity,
-                      errorWidget: (_, __, ___) => _localFallback(index),
-                    )
-                  : _localFallback(index),
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  coverUrl != null
+                      ? CachedNetworkImage(
+                          imageUrl: coverUrl,
+                          fit: BoxFit.cover,
+                          width: double.infinity,
+                          errorWidget: (_, __, ___) => _localFallback(index),
+                        )
+                      : _localFallback(index),
+                  if (isChosen)
+                    Positioned(
+                      top: 8, right: 8,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: TrailColors.primary,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.check_rounded, color: Colors.white, size: 11),
+                            SizedBox(width: 3),
+                            Text('Active', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w700)),
+                          ],
+                        ),
+                      ),
+                    ),
+                ],
+              ),
             ),
             Padding(
               padding: const EdgeInsets.all(12),
@@ -156,8 +204,9 @@ class _DestCard extends StatelessWidget {
 }
 
 class _DestinationSheet extends StatefulWidget {
-  const _DestinationSheet({required this.dest});
+  const _DestinationSheet({required this.dest, this.onChosen});
   final Map<String, dynamic> dest;
+  final void Function(String id)? onChosen;
 
   @override
   State<_DestinationSheet> createState() => _DestinationSheetState();
@@ -183,6 +232,16 @@ class _DestinationSheetState extends State<_DestinationSheet> {
       if (mounted) setState(() => _loading = false);
     }
   }
+
+  String _typeEmoji(String type) => const {
+    'landmark':  '🏛️',
+    'food':      '🍜',
+    'cultural':  '🎭',
+    'adventure': '⛰️',
+    'heritage':  '🏺',
+    'nature':    '🌿',
+    'shopping':  '🛍️',
+  }[type] ?? '🎯';
 
   @override
   Widget build(BuildContext context) {
@@ -235,14 +294,73 @@ class _DestinationSheetState extends State<_DestinationSheet> {
                   else
                     ..._quests.map((q) {
                       final quest = q as Map<String, dynamic>;
-                      return ListTile(
-                        onTap: () { Navigator.pop(context); context.go('/quests/${quest['id']}'); },
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 0, vertical: 4),
-                        title: Text(quest['title'] ?? '', style: const TextStyle(color: TrailColors.onBackground, fontWeight: FontWeight.w600)),
-                        subtitle: Text('+${quest['xpReward'] ?? 0} XP · ${quest['estDurationMin'] ?? 0} min', style: TextStyle(color: TrailColors.onSurfaceMuted, fontSize: 12)),
-                        trailing: const Icon(Icons.chevron_right_rounded, color: TrailColors.onSurfaceMuted),
+                      final type = (quest['questType'] as String?) ?? 'landmark';
+                      final difficulty = (quest['difficulty'] as int?) ?? 1;
+                      return GestureDetector(
+                        onTap: () {
+                          final destId = widget.dest['id']?.toString() ?? '';
+                          widget.onChosen?.call(destId);
+                          Navigator.pop(context);
+                          context.go('/quests/${quest['id']}');
+                        },
+                        child: Container(
+                          margin: const EdgeInsets.only(bottom: 10),
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: TrailColors.background,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 40, height: 40,
+                                decoration: BoxDecoration(
+                                  color: TrailColors.primary.withOpacity(0.15),
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: Center(
+                                  child: Text(
+                                    _typeEmoji(type),
+                                    style: const TextStyle(fontSize: 18),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(quest['title'] ?? '', style: const TextStyle(color: TrailColors.onBackground, fontWeight: FontWeight.w600, fontSize: 13), maxLines: 1, overflow: TextOverflow.ellipsis),
+                                    const SizedBox(height: 3),
+                                    Row(
+                                      children: [
+                                        ...List.generate(5, (i) => Icon(Icons.star_rounded, size: 9, color: i < difficulty ? TrailColors.accent : TrailColors.surfaceAlt)),
+                                        const SizedBox(width: 6),
+                                        Text('+${quest['xpReward'] ?? 0} XP', style: TextStyle(color: TrailColors.accent, fontSize: 11, fontWeight: FontWeight.w700)),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const Icon(Icons.chevron_right_rounded, color: TrailColors.onSurfaceMuted, size: 18),
+                            ],
+                          ),
+                        ),
                       );
                     }),
+                  const SizedBox(height: 8),
+                  FilledButton(
+                    onPressed: () {
+                      final slug = widget.dest['slug'] as String? ?? '';
+                      final name = widget.dest['name'] as String? ?? '';
+                      final destId = widget.dest['id']?.toString() ?? '';
+                      widget.onChosen?.call(destId);
+                      Navigator.pop(context);
+                      context.go('/quests?destination=$slug&destinationName=${Uri.encodeComponent(name)}');
+                    },
+                    style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(48)),
+                    child: const Text('View all quests →'),
+                  ),
                 ],
               ),
             ),

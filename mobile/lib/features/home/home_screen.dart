@@ -239,8 +239,10 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         const SizedBox(height: 8),
         ..._leaders.asMap().entries.map((e) {
-          final idx = e.key;
+          final idx   = e.key;
           final entry = e.value as Map<String, dynamic>;
+          final user  = (entry['user'] as Map<String, dynamic>?) ?? entry;
+          final score = (entry['score'] as num?) ?? (entry['xpTotal'] as num?) ?? 0;
           final medals = ['🥇', '🥈', '🥉'];
           return Container(
             margin: const EdgeInsets.only(bottom: 8),
@@ -257,7 +259,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   radius: 18,
                   backgroundColor: TrailColors.primary.withOpacity(0.2),
                   child: Text(
-                    (entry['username'] as String? ?? 'U')[0].toUpperCase(),
+                    (user['username'] as String? ?? 'U')[0].toUpperCase(),
                     style: TextStyle(color: TrailColors.primary, fontWeight: FontWeight.w700, fontSize: 13),
                   ),
                 ),
@@ -266,12 +268,12 @@ class _HomeScreenState extends State<HomeScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(entry['displayName'] ?? entry['username'] ?? '', style: const TextStyle(color: TrailColors.onBackground, fontWeight: FontWeight.w600, fontSize: 14)),
-                      Text('Lv.${entry['level'] ?? 1}', style: TextStyle(color: TrailColors.onSurfaceMuted, fontSize: 12)),
+                      Text(user['displayName'] ?? user['username'] ?? '', style: const TextStyle(color: TrailColors.onBackground, fontWeight: FontWeight.w600, fontSize: 14)),
+                      Text('Lv.${user['level'] ?? 1}', style: TextStyle(color: TrailColors.onSurfaceMuted, fontSize: 12)),
                     ],
                   ),
                 ),
-                Text('${entry['xpTotal'] ?? 0} XP', style: TextStyle(color: TrailColors.accent, fontWeight: FontWeight.w700, fontSize: 13)),
+                Text('${score.toInt()} XP', style: TextStyle(color: TrailColors.accent, fontWeight: FontWeight.w700, fontSize: 13)),
               ],
             ),
           ).animate().fadeIn(delay: (200 + idx * 50).ms, duration: 300.ms);

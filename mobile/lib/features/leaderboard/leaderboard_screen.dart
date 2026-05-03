@@ -103,6 +103,8 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
         crossAxisAlignment: CrossAxisAlignment.end,
         children: order.map((idx) {
           final entry = top3[idx] as Map<String, dynamic>;
+          final user  = (entry['user'] as Map<String, dynamic>?) ?? entry;
+          final score = (entry['score'] as num?) ?? (entry['xpTotal'] as num?) ?? 0;
           final medals = ['🥇', '🥈', '🥉'];
           return Expanded(
             child: Column(
@@ -113,13 +115,13 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                   radius: idx == 0 ? 28 : 22,
                   backgroundColor: TrailColors.primary.withOpacity(0.2),
                   child: Text(
-                    (entry['username'] as String? ?? 'U')[0].toUpperCase(),
+                    (user['username'] as String? ?? 'U')[0].toUpperCase(),
                     style: TextStyle(color: TrailColors.primary, fontWeight: FontWeight.w700, fontSize: idx == 0 ? 20 : 16),
                   ),
                 ),
                 const SizedBox(height: 6),
-                Text(entry['displayName'] ?? entry['username'] ?? '', style: const TextStyle(color: TrailColors.onBackground, fontWeight: FontWeight.w600, fontSize: 12), textAlign: TextAlign.center, maxLines: 1, overflow: TextOverflow.ellipsis),
-                Text('${entry['xpTotal'] ?? 0} XP', style: TextStyle(color: TrailColors.accent, fontSize: 11, fontWeight: FontWeight.w700)),
+                Text(user['displayName'] ?? user['username'] ?? '', style: const TextStyle(color: TrailColors.onBackground, fontWeight: FontWeight.w600, fontSize: 12), textAlign: TextAlign.center, maxLines: 1, overflow: TextOverflow.ellipsis),
+                Text('${score.toInt()} XP', style: TextStyle(color: TrailColors.accent, fontSize: 11, fontWeight: FontWeight.w700)),
                 const SizedBox(height: 8),
                 Container(
                   height: heights[idx],
@@ -171,6 +173,8 @@ class _LeaderRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final user  = (entry['user'] as Map<String, dynamic>?) ?? entry;
+    final score = (entry['score'] as num?) ?? (entry['xpTotal'] as num?) ?? 0;
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -181,19 +185,19 @@ class _LeaderRow extends StatelessWidget {
           CircleAvatar(
             radius: 18,
             backgroundColor: TrailColors.primary.withOpacity(0.15),
-            child: Text((entry['username'] as String? ?? 'U')[0].toUpperCase(), style: TextStyle(color: TrailColors.primary, fontWeight: FontWeight.w700, fontSize: 13)),
+            child: Text((user['username'] as String? ?? 'U')[0].toUpperCase(), style: TextStyle(color: TrailColors.primary, fontWeight: FontWeight.w700, fontSize: 13)),
           ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(entry['displayName'] ?? entry['username'] ?? '', style: const TextStyle(color: TrailColors.onBackground, fontWeight: FontWeight.w600, fontSize: 14)),
-                Text('Lv.${entry['level'] ?? 1}', style: TextStyle(color: TrailColors.onSurfaceMuted, fontSize: 12)),
+                Text(user['displayName'] ?? user['username'] ?? '', style: const TextStyle(color: TrailColors.onBackground, fontWeight: FontWeight.w600, fontSize: 14)),
+                Text('Lv.${user['level'] ?? 1}', style: TextStyle(color: TrailColors.onSurfaceMuted, fontSize: 12)),
               ],
             ),
           ),
-          Text('${entry['xpTotal'] ?? 0} XP', style: TextStyle(color: TrailColors.accent, fontWeight: FontWeight.w700, fontSize: 13)),
+          Text('${score.toInt()} XP', style: TextStyle(color: TrailColors.accent, fontWeight: FontWeight.w700, fontSize: 13)),
         ],
       ),
     ).animate().fadeIn(delay: (index * 30).ms, duration: 300.ms);

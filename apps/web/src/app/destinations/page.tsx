@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import { Sidebar } from '@/components/Sidebar';
@@ -55,12 +55,14 @@ const TYPE_ICON: Record<string, string> = {
 };
 
 export default function DestinationsPage() {
-  const { destinations, quests, setDestinations, setSelectedDestinationId } = useStore();
+  const { destinations, quests, setDestinations, setSelectedDestinationId, selectedDestinationId } = useStore();
   const router = useRouter();
   const [loading, setLoading]             = useState(true);
   const [error, setError]                 = useState<string | null>(null);
   const [selected, setSelected]           = useState<DestinationDetail | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
+  const [toast, setToast]                 = useState<string | null>(null);
+  const toastTimer                        = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     apiClient.get('/destinations')
@@ -69,8 +71,15 @@ export default function DestinationsPage() {
       .finally(() => setLoading(false));
   }, []);
 
+  const showToast = (msg: string) => {
+    if (toastTimer.current) clearTimeout(toastTimer.current);
+    setToast(msg);
+    toastTimer.current = setTimeout(() => setToast(null), 2500);
+  };
+
   const handleSelect = (dest: typeof destinations[0]) => {
     setSelectedDestinationId(dest.id);
+    showToast(`📍 ${dest.name} set as your destination`);
     setDetailLoading(true);
     setSelected(null);
     apiClient.get(`/destinations/${dest.slug}`)
@@ -124,12 +133,14 @@ export default function DestinationsPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
                 {active.map((dest) => {
                   const qCount = questCountFor(dest.id);
+                  const isChosen = selectedDestinationId === dest.id;
                   return (
                     <div
                       key={dest.id}
                       onClick={() => handleSelect(dest)}
-                      className="bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100
-                                 hover:shadow-lg hover:border-trail-orange cursor-pointer transition-all group"
+                      className={`bg-white rounded-2xl overflow-hidden shadow-sm cursor-pointer transition-all group
+                                  hover:shadow-lg hover:border-trail-orange border
+                                  ${isChosen ? 'border-trail-orange shadow-md' : 'border-gray-100'}`}
                     >
                       {/* Hero image */}
                       <div className="relative w-full h-48 overflow-hidden">
@@ -152,6 +163,11 @@ export default function DestinationsPage() {
                         <span className="absolute top-3 right-3 bg-black/40 backdrop-blur-sm text-white text-xs px-2 py-0.5 rounded-full font-medium">
                           {qCount} quest{qCount !== 1 ? 's' : ''}
                         </span>
+                        {isChosen && (
+                          <span className="absolute top-3 left-3 bg-trail-orange text-white text-xs px-2.5 py-1 rounded-full font-bold flex items-center gap-1">
+                            ✓ Active
+                          </span>
+                        )}
                       </div>
 
                       <div className="p-4">
@@ -159,8 +175,8 @@ export default function DestinationsPage() {
                         {dest.description && (
                           <p className="text-xs text-gray-500 line-clamp-2 mb-3">{dest.description}</p>
                         )}
-                        <span className="text-xs text-trail-orange font-semibold group-hover:underline">
-                          Explore →
+                        <span className={`text-xs font-semibold group-hover:underline ${isChosen ? 'text-trail-orange' : 'text-trail-orange'}`}>
+                          {isChosen ? 'Your destination →' : 'Explore →'}
                         </span>
                       </div>
                     </div>
@@ -171,6 +187,13 @@ export default function DestinationsPage() {
           </div>
           <MobileNav />
         </main>
+
+        {/* Toast notification */}
+        {toast && (
+          <div className="fixed bottom-24 md:bottom-6 left-1/2 -translate-x-1/2 z-[60] bg-gray-900 text-white text-sm font-medium px-5 py-3 rounded-full shadow-lg animate-fade-in whitespace-nowrap">
+            {toast}
+          </div>
+        )}
 
         {/* Detail modal — slides up from bottom on mobile */}
         {(selected || detailLoading) && (
@@ -256,7 +279,11 @@ export default function DestinationsPage() {
                           ))}
                         </div>
                         <button
-                          onClick={() => router.push('/quests')}
+                          onClick={() => {
+                            const slug = selected.slug;
+                            const name = encodeURIComponent(selected.name);
+                            router.push(`/quests?destination=${slug}&destinationName=${name}`);
+                          }}
                           className="mt-4 w-full py-2.5 rounded-xl bg-trail-orange text-white text-sm font-semibold
                                      hover:bg-trail-orange-dark transition-colors active:scale-95"
                         >

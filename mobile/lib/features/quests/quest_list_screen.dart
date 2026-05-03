@@ -6,7 +6,14 @@ import '../../core/api/api_client.dart';
 import '../../core/theme/colors.dart';
 
 class QuestListScreen extends StatefulWidget {
-  const QuestListScreen({super.key});
+  const QuestListScreen({
+    super.key,
+    required this.destinationSlug,
+    this.destinationName,
+  });
+
+  final String? destinationSlug;
+  final String? destinationName;
 
   @override
   State<QuestListScreen> createState() => _QuestListScreenState();
@@ -15,7 +22,7 @@ class QuestListScreen extends StatefulWidget {
 class _QuestListScreenState extends State<QuestListScreen> {
   final _dio = buildDio();
   List<dynamic> _quests = [];
-  bool _loading = true;
+  bool _loading = false;
   String _selectedType = 'all';
   int _selectedDifficulty = 0;
 
@@ -23,22 +30,23 @@ class _QuestListScreenState extends State<QuestListScreen> {
     ('all', 'All'),
     ('landmark', 'Heritage'),
     ('food', 'Food'),
-    ('route', 'Route'),
-    ('culture', 'Culture'),
+    ('cultural', 'Culture'),
     ('adventure', 'Adventure'),
+    ('heritage', 'Heritage'),
     ('nature', 'Nature'),
+    ('shopping', 'Shopping'),
   ];
 
   @override
   void initState() {
     super.initState();
-    _load();
+    if (widget.destinationSlug != null) _load();
   }
 
   Future<void> _load() async {
     setState(() => _loading = true);
     try {
-      var query = '/quests?destinationSlug=ilocos-norte';
+      var query = '/quests?destinationSlug=${widget.destinationSlug}';
       if (_selectedType != 'all') query += '&type=$_selectedType';
       if (_selectedDifficulty > 0) query += '&difficulty=$_selectedDifficulty';
       final res = await _dio.get(query);
@@ -50,9 +58,66 @@ class _QuestListScreenState extends State<QuestListScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Gate: no destination selected
+    if (widget.destinationSlug == null) {
+      return Scaffold(
+        backgroundColor: TrailColors.background,
+        appBar: AppBar(title: const Text('Quests'), backgroundColor: TrailColors.background),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(32),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Text('🗺️', style: TextStyle(fontSize: 64)),
+                const SizedBox(height: 20),
+                const Text(
+                  'Choose a destination first',
+                  style: TextStyle(color: TrailColors.onBackground, fontSize: 20, fontWeight: FontWeight.w700),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  'Quests are tied to a destination. Pick one to see the missions available there.',
+                  style: TextStyle(color: TrailColors.onSurfaceMuted, fontSize: 14, height: 1.5),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 32),
+                FilledButton.icon(
+                  onPressed: () => context.go('/destinations'),
+                  icon: const Icon(Icons.place_rounded),
+                  label: const Text('Browse Destinations'),
+                ),
+              ],
+            ).animate().fadeIn(duration: 400.ms).slideY(begin: 0.1, end: 0),
+          ),
+        ),
+      );
+    }
+
     return Scaffold(
       backgroundColor: TrailColors.background,
-      appBar: AppBar(title: const Text('Quests'), backgroundColor: TrailColors.background),
+      appBar: AppBar(
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Quests', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+            if (widget.destinationName != null)
+              Text(
+                widget.destinationName!,
+                style: TextStyle(color: TrailColors.onSurfaceMuted, fontSize: 12),
+              ),
+          ],
+        ),
+        backgroundColor: TrailColors.background,
+        actions: [
+          TextButton.icon(
+            onPressed: () => context.go('/destinations'),
+            icon: Icon(Icons.swap_horiz_rounded, size: 16, color: TrailColors.primary),
+            label: Text('Change', style: TextStyle(color: TrailColors.primary, fontSize: 13)),
+          ),
+        ],
+      ),
       body: Column(
         children: [
           _buildTypeFilter(),
@@ -63,7 +128,24 @@ class _QuestListScreenState extends State<QuestListScreen> {
                 : RefreshIndicator(
                     onRefresh: _load,
                     child: _quests.isEmpty
-                        ? Center(child: Text('No quests found', style: TextStyle(color: TrailColors.onSurfaceMuted)))
+                        ? Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const Text('📍', style: TextStyle(fontSize: 48)),
+                                const SizedBox(height: 12),
+                                Text(
+                                  'No quests found',
+                                  style: TextStyle(color: TrailColors.onBackground, fontSize: 16, fontWeight: FontWeight.w600),
+                                ),
+                                const SizedBox(height: 6),
+                                Text(
+                                  'Try adjusting your filters.',
+                                  style: TextStyle(color: TrailColors.onSurfaceMuted, fontSize: 13),
+                                ),
+                              ],
+                            ),
+                          )
                         : GridView.builder(
                             padding: const EdgeInsets.all(16),
                             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
@@ -96,7 +178,10 @@ class _QuestListScreenState extends State<QuestListScreen> {
           final t = _types[i];
           final selected = t.$1 == _selectedType;
           return GestureDetector(
-            onTap: () { setState(() => _selectedType = t.$1); _load(); },
+            onTap: () {
+              setState(() => _selectedType = t.$1);
+              _load();
+            },
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 200),
               margin: const EdgeInsets.only(right: 8, top: 6, bottom: 6),
@@ -105,7 +190,16 @@ class _QuestListScreenState extends State<QuestListScreen> {
                 color: selected ? TrailColors.primary : TrailColors.surfaceAlt,
                 borderRadius: BorderRadius.circular(20),
               ),
-              child: Center(child: Text(t.$2, style: TextStyle(color: selected ? Colors.white : TrailColors.onSurfaceMuted, fontWeight: FontWeight.w600, fontSize: 13))),
+              child: Center(
+                child: Text(
+                  t.$2,
+                  style: TextStyle(
+                    color: selected ? Colors.white : TrailColors.onSurfaceMuted,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 13,
+                  ),
+                ),
+              ),
             ),
           );
         },
@@ -124,7 +218,10 @@ class _QuestListScreenState extends State<QuestListScreen> {
           final selected = i == _selectedDifficulty;
           final label = i == 0 ? 'Any' : '★' * i;
           return GestureDetector(
-            onTap: () { setState(() => _selectedDifficulty = i); _load(); },
+            onTap: () {
+              setState(() => _selectedDifficulty = i);
+              _load();
+            },
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 200),
               margin: const EdgeInsets.only(right: 8, top: 4, bottom: 4),
@@ -134,7 +231,16 @@ class _QuestListScreenState extends State<QuestListScreen> {
                 borderRadius: BorderRadius.circular(20),
                 border: Border.all(color: selected ? TrailColors.accent : TrailColors.surfaceAlt),
               ),
-              child: Center(child: Text(label, style: TextStyle(color: selected ? TrailColors.accent : TrailColors.onSurfaceMuted, fontSize: 12, fontWeight: FontWeight.w600))),
+              child: Center(
+                child: Text(
+                  label,
+                  style: TextStyle(
+                    color: selected ? TrailColors.accent : TrailColors.onSurfaceMuted,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
             ),
           );
         },
@@ -149,27 +255,34 @@ class _QuestCard extends StatelessWidget {
   final int index;
 
   static const _typeColors = {
-    'landmark': Color(0xFF6366F1),
-    'food': Color(0xFFEC4899),
-    'route': Color(0xFF22C55E),
-    'culture': Color(0xFFF59E0B),
+    'landmark':  Color(0xFF6366F1),
+    'food':      Color(0xFFEC4899),
+    'cultural':  Color(0xFFF59E0B),
     'adventure': Color(0xFFEF4444),
-    'nature': Color(0xFF10B981),
+    'heritage':  Color(0xFF8B5CF6),
+    'nature':    Color(0xFF10B981),
+    'shopping':  Color(0xFFEC4899),
   };
 
   static const _typeLabels = {
-    'landmark': 'Heritage', 'food': 'Food', 'route': 'Route',
-    'culture': 'Culture', 'adventure': 'Adventure', 'nature': 'Nature',
+    'landmark':  'Landmark',
+    'food':      'Food',
+    'cultural':  'Cultural',
+    'adventure': 'Adventure',
+    'heritage':  'Heritage',
+    'nature':    'Nature',
+    'shopping':  'Shopping',
   };
 
   @override
   Widget build(BuildContext context) {
-    final type = (quest['questType'] as String?) ?? 'landmark';
+    final type       = (quest['questType'] as String?) ?? 'landmark';
     final difficulty = (quest['difficulty'] as int?) ?? 1;
-    final xp = (quest['xpReward'] as int?) ?? 0;
-    final duration = (quest['estDurationMin'] as int?) ?? 0;
-    final coverUrl = quest['coverImageUrl'] as String?;
-    final color = _typeColors[type] ?? TrailColors.primary;
+    final xp         = (quest['xpReward'] as int?) ?? 0;
+    final duration   = (quest['estDurationMin'] as int?) ?? 0;
+    final coverUrl   = quest['coverImageUrl'] as String?;
+    final isPremium  = (quest['isPremium'] as bool?) ?? false;
+    final color      = _typeColors[type] ?? TrailColors.primary;
 
     return GestureDetector(
       onTap: () => context.go('/quests/${quest['id']}'),
@@ -186,9 +299,27 @@ class _QuestCard extends StatelessWidget {
             SizedBox(
               height: 110,
               width: double.infinity,
-              child: coverUrl != null
-                  ? CachedNetworkImage(imageUrl: coverUrl, fit: BoxFit.cover, errorWidget: (_, __, ___) => _placeholder())
-                  : _placeholder(),
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  coverUrl != null
+                      ? CachedNetworkImage(
+                          imageUrl: coverUrl,
+                          fit: BoxFit.cover,
+                          errorWidget: (_, __, ___) => _placeholder(),
+                        )
+                      : _placeholder(),
+                  if (isPremium)
+                    Positioned(
+                      top: 6, right: 6,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(color: const Color(0xFF7C3AED), borderRadius: BorderRadius.circular(8)),
+                        child: const Text('⭐ Premium', style: TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w700)),
+                      ),
+                    ),
+                ],
+              ),
             ),
             Padding(
               padding: const EdgeInsets.all(10),
@@ -201,19 +332,21 @@ class _QuestCard extends StatelessWidget {
                     child: Text(_typeLabels[type] ?? type, style: TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.w600)),
                   ),
                   const SizedBox(height: 6),
-                  Text(quest['title'] ?? '', style: const TextStyle(color: TrailColors.onBackground, fontWeight: FontWeight.w600, fontSize: 13), maxLines: 2, overflow: TextOverflow.ellipsis),
-                  const SizedBox(height: 6),
-                  Row(
-                    children: [
-                      ...List.generate(5, (i) => Icon(Icons.star_rounded, size: 10, color: i < difficulty ? TrailColors.accent : TrailColors.surfaceAlt)),
-                    ],
+                  Text(
+                    quest['title'] ?? '',
+                    style: const TextStyle(color: TrailColors.onBackground, fontWeight: FontWeight.w600, fontSize: 13),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                   ),
+                  const SizedBox(height: 6),
+                  Row(children: List.generate(5, (i) => Icon(Icons.star_rounded, size: 10, color: i < difficulty ? TrailColors.accent : TrailColors.surfaceAlt))),
                   const SizedBox(height: 4),
                   Row(
                     children: [
                       Text('+$xp XP', style: TextStyle(color: TrailColors.accent, fontSize: 11, fontWeight: FontWeight.w700)),
                       const Spacer(),
-                      Text('${duration}m', style: TextStyle(color: TrailColors.onSurfaceMuted, fontSize: 11)),
+                      if (duration > 0)
+                        Text('${duration}m', style: TextStyle(color: TrailColors.onSurfaceMuted, fontSize: 11)),
                     ],
                   ),
                 ],

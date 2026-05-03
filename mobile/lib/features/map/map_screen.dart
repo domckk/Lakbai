@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:go_router/go_router.dart';
@@ -87,29 +88,113 @@ class _MapScreenState extends State<MapScreen> {
   void _showDestinationInfo(Map<String, dynamic> dest) {
     showModalBottomSheet(
       context: context,
-      backgroundColor: TrailColors.surface,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (_) => Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _MapDestinationSheet(dest: dest),
+    );
+  }
+}
+
+class _MapDestinationSheet extends StatefulWidget {
+  const _MapDestinationSheet({required this.dest});
+  final Map<String, dynamic> dest;
+
+  @override
+  State<_MapDestinationSheet> createState() => _MapDestinationSheetState();
+}
+
+class _MapDestinationSheetState extends State<_MapDestinationSheet> {
+  final _dio = buildDio();
+  List<dynamic> _quests = [];
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadQuests();
+  }
+
+  Future<void> _loadQuests() async {
+    try {
+      final slug = widget.dest['slug'] ?? widget.dest['id'];
+      final res = await _dio.get('/quests?destinationSlug=$slug');
+      setState(() => _quests = res.data as List);
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final dest     = widget.dest;
+    final coverUrl = (dest['heroImageUrl'] ?? dest['coverImageUrl']) as String?;
+    final slug     = dest['slug'] as String? ?? '';
+    final name     = dest['name'] as String? ?? '';
+
+    return DraggableScrollableSheet(
+      initialChildSize: 0.6,
+      maxChildSize: 0.92,
+      minChildSize: 0.35,
+      builder: (_, ctrl) => Container(
+        decoration: const BoxDecoration(
+          color: TrailColors.surface,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        child: ListView(
+          controller: ctrl,
           children: [
-            Text(dest['name'] ?? '', style: Theme.of(context).textTheme.titleLarge),
-            const SizedBox(height: 4),
-            Text(dest['region'] ?? '', style: TextStyle(color: TrailColors.onSurfaceMuted)),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                Icon(Icons.flag_rounded, size: 16, color: TrailColors.primary),
-                const SizedBox(width: 6),
-                Text('${dest['questCount'] ?? 0} quests available', style: TextStyle(color: TrailColors.primary, fontWeight: FontWeight.w600)),
-              ],
+            Center(
+              child: Container(
+                margin: const EdgeInsets.only(top: 12),
+                width: 40, height: 4,
+                decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(2)),
+              ),
             ),
-            const SizedBox(height: 16),
-            FilledButton(
-              onPressed: () { Navigator.pop(context); context.go('/destinations'); },
-              child: const Text('View Destination'),
+            if (coverUrl != null)
+              ClipRRect(
+                child: CachedNetworkImage(imageUrl: coverUrl, height: 160, fit: BoxFit.cover, width: double.infinity),
+              ),
+            Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(dest['name'] ?? '', style: Theme.of(context).textTheme.titleLarge),
+                  const SizedBox(height: 4),
+                  Text(dest['region'] ?? '', style: TextStyle(color: TrailColors.onSurfaceMuted)),
+                  if (dest['description'] != null) ...[
+                    const SizedBox(height: 12),
+                    Text(dest['description'], style: TextStyle(color: TrailColors.onSurface, height: 1.5)),
+                  ],
+                  const SizedBox(height: 20),
+                  Text('Quests', style: Theme.of(context).textTheme.titleMedium),
+                  const SizedBox(height: 12),
+                  if (_loading)
+                    const Center(child: CircularProgressIndicator())
+                  else if (_quests.isEmpty)
+                    Text('No quests available', style: TextStyle(color: TrailColors.onSurfaceMuted))
+                  else
+                    ..._quests.take(4).map((q) {
+                      final quest = q as Map<String, dynamic>;
+                      return ListTile(
+                        onTap: () { Navigator.pop(context); context.go('/quests/${quest['id']}'); },
+                        contentPadding: EdgeInsets.zero,
+                        title: Text(quest['title'] ?? '', style: const TextStyle(color: TrailColors.onBackground, fontWeight: FontWeight.w600)),
+                        subtitle: Text('+${quest['xpReward'] ?? 0} XP', style: TextStyle(color: TrailColors.accent, fontSize: 12, fontWeight: FontWeight.w700)),
+                        trailing: const Icon(Icons.chevron_right_rounded, color: TrailColors.onSurfaceMuted),
+                      );
+                    }),
+                  const SizedBox(height: 12),
+                  FilledButton(
+                    onPressed: () {
+                      Navigator.pop(context);
+                      context.go('/quests?destination=$slug&destinationName=${Uri.encodeComponent(name)}');
+                    },
+                    style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(48)),
+                    child: const Text('View all quests →'),
+                  ),
+                ],
+              ),
             ),
           ],
         ),
