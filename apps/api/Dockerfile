@@ -18,7 +18,7 @@ COPY apps/api ./apps/api
 RUN pnpm install --frozen-lockfile
 
 # Build
-RUN pnpm build --filter @trailquest/api
+RUN pnpm --filter @trailquest/api run build
 
 # Run
 EXPOSE 4000
