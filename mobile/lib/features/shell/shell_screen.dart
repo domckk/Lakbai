@@ -8,8 +8,8 @@ class ShellScreen extends StatelessWidget {
 
   static const _tabs = [
     ('/home', Icons.home_rounded, 'Home'),
+    ('/destinations', Icons.place_rounded, 'Explore'),
     ('/map', Icons.map_rounded, 'Map'),
-    ('/quests', Icons.flag_rounded, 'Quests'),
     ('/passport', Icons.auto_stories_rounded, 'Passport'),
     ('/profile', Icons.person_rounded, 'Profile'),
   ];
@@ -36,6 +36,7 @@ class ShellScreen extends StatelessWidget {
           indicatorColor: TrailColors.primary.withOpacity(0.18),
           selectedIndex: _indexOf(context),
           onDestinationSelected: (i) => context.go(_tabs[i].$1),
+          labelBehavior: NavigationDestinationLabelBehavior.onlyShowSelected,
           destinations: _tabs
               .map((t) => NavigationDestination(
                     icon: Icon(t.$2, color: TrailColors.onSurfaceMuted),
