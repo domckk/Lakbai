@@ -1,0 +1,13 @@
+{
+  "name": "TrailQuest - Web",
+  "short_name": "TrailQuest",
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "any"
+    }
+  ],
+  "theme_color": "#4f46e5",
+  "background_color": "#ffffff",
+  "display": "standalone"
+}

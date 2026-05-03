@@ -1,0 +1,26 @@
+{
+  "name": "trailquest",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Trail Quest — gamified digital tourism platform (Ilocos Norte MVP)",
+  "packageManager": "pnpm@9.12.0",
+  "engines": {
+    "node": ">=20.11"
+  },
+  "scripts": {
+    "dev": "pnpm -r --parallel --filter \"./apps/*\" run dev",
+    "build": "pnpm -r --filter \"./apps/*\" run build",
+    "lint": "pnpm -r run lint",
+    "typecheck": "pnpm -r run typecheck",
+    "test": "pnpm -r run test",
+    "db:up": "docker compose up -d postgres redis",
+    "db:down": "docker compose down",
+    "db:migrate": "pnpm --filter @trailquest/api run db:migrate",
+    "db:seed": "pnpm --filter @trailquest/api run db:seed",
+    "db:reset": "docker compose down -v && pnpm db:up && sleep 5 && pnpm db:migrate && pnpm db:seed"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.3",
+    "prettier": "^3.3.3"
+  }
+}

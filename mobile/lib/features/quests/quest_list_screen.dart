@@ -1,0 +1,232 @@
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
+import 'package:go_router/go_router.dart';
+import '../../core/api/api_client.dart';
+import '../../core/theme/colors.dart';
+
+class QuestListScreen extends StatefulWidget {
+  const QuestListScreen({super.key});
+
+  @override
+  State<QuestListScreen> createState() => _QuestListScreenState();
+}
+
+class _QuestListScreenState extends State<QuestListScreen> {
+  final _dio = buildDio();
+  List<dynamic> _quests = [];
+  bool _loading = true;
+  String _selectedType = 'all';
+  int _selectedDifficulty = 0;
+
+  static const _types = [
+    ('all', 'All'),
+    ('landmark', 'Heritage'),
+    ('food', 'Food'),
+    ('route', 'Route'),
+    ('culture', 'Culture'),
+    ('adventure', 'Adventure'),
+    ('nature', 'Nature'),
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    setState(() => _loading = true);
+    try {
+      var query = '/quests?destinationSlug=ilocos-norte';
+      if (_selectedType != 'all') query += '&type=$_selectedType';
+      if (_selectedDifficulty > 0) query += '&difficulty=$_selectedDifficulty';
+      final res = await _dio.get(query);
+      setState(() => _quests = res.data as List);
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: TrailColors.background,
+      appBar: AppBar(title: const Text('Quests'), backgroundColor: TrailColors.background),
+      body: Column(
+        children: [
+          _buildTypeFilter(),
+          _buildDifficultyFilter(),
+          Expanded(
+            child: _loading
+                ? const Center(child: CircularProgressIndicator())
+                : RefreshIndicator(
+                    onRefresh: _load,
+                    child: _quests.isEmpty
+                        ? Center(child: Text('No quests found', style: TextStyle(color: TrailColors.onSurfaceMuted)))
+                        : GridView.builder(
+                            padding: const EdgeInsets.all(16),
+                            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: 2,
+                              childAspectRatio: 0.72,
+                              crossAxisSpacing: 12,
+                              mainAxisSpacing: 12,
+                            ),
+                            itemCount: _quests.length,
+                            itemBuilder: (_, i) => _QuestCard(
+                              quest: _quests[i] as Map<String, dynamic>,
+                              index: i,
+                            ),
+                          ),
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTypeFilter() {
+    return SizedBox(
+      height: 44,
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        itemCount: _types.length,
+        itemBuilder: (_, i) {
+          final t = _types[i];
+          final selected = t.$1 == _selectedType;
+          return GestureDetector(
+            onTap: () { setState(() => _selectedType = t.$1); _load(); },
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              margin: const EdgeInsets.only(right: 8, top: 6, bottom: 6),
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              decoration: BoxDecoration(
+                color: selected ? TrailColors.primary : TrailColors.surfaceAlt,
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Center(child: Text(t.$2, style: TextStyle(color: selected ? Colors.white : TrailColors.onSurfaceMuted, fontWeight: FontWeight.w600, fontSize: 13))),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildDifficultyFilter() {
+    return SizedBox(
+      height: 40,
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        itemCount: 6,
+        itemBuilder: (_, i) {
+          final selected = i == _selectedDifficulty;
+          final label = i == 0 ? 'Any' : '★' * i;
+          return GestureDetector(
+            onTap: () { setState(() => _selectedDifficulty = i); _load(); },
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              margin: const EdgeInsets.only(right: 8, top: 4, bottom: 4),
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              decoration: BoxDecoration(
+                color: selected ? TrailColors.accent.withOpacity(0.2) : Colors.transparent,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: selected ? TrailColors.accent : TrailColors.surfaceAlt),
+              ),
+              child: Center(child: Text(label, style: TextStyle(color: selected ? TrailColors.accent : TrailColors.onSurfaceMuted, fontSize: 12, fontWeight: FontWeight.w600))),
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _QuestCard extends StatelessWidget {
+  const _QuestCard({required this.quest, required this.index});
+  final Map<String, dynamic> quest;
+  final int index;
+
+  static const _typeColors = {
+    'landmark': Color(0xFF6366F1),
+    'food': Color(0xFFEC4899),
+    'route': Color(0xFF22C55E),
+    'culture': Color(0xFFF59E0B),
+    'adventure': Color(0xFFEF4444),
+    'nature': Color(0xFF10B981),
+  };
+
+  static const _typeLabels = {
+    'landmark': 'Heritage', 'food': 'Food', 'route': 'Route',
+    'culture': 'Culture', 'adventure': 'Adventure', 'nature': 'Nature',
+  };
+
+  @override
+  Widget build(BuildContext context) {
+    final type = (quest['questType'] as String?) ?? 'landmark';
+    final difficulty = (quest['difficulty'] as int?) ?? 1;
+    final xp = (quest['xpReward'] as int?) ?? 0;
+    final duration = (quest['estDurationMin'] as int?) ?? 0;
+    final coverUrl = quest['coverImageUrl'] as String?;
+    final color = _typeColors[type] ?? TrailColors.primary;
+
+    return GestureDetector(
+      onTap: () => context.go('/quests/${quest['id']}'),
+      child: Container(
+        decoration: BoxDecoration(
+          color: TrailColors.surface,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.white.withOpacity(0.05)),
+        ),
+        clipBehavior: Clip.hardEdge,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SizedBox(
+              height: 110,
+              width: double.infinity,
+              child: coverUrl != null
+                  ? CachedNetworkImage(imageUrl: coverUrl, fit: BoxFit.cover, errorWidget: (_, __, ___) => _placeholder())
+                  : _placeholder(),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(10),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(color: color.withOpacity(0.15), borderRadius: BorderRadius.circular(8)),
+                    child: Text(_typeLabels[type] ?? type, style: TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.w600)),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(quest['title'] ?? '', style: const TextStyle(color: TrailColors.onBackground, fontWeight: FontWeight.w600, fontSize: 13), maxLines: 2, overflow: TextOverflow.ellipsis),
+                  const SizedBox(height: 6),
+                  Row(
+                    children: [
+                      ...List.generate(5, (i) => Icon(Icons.star_rounded, size: 10, color: i < difficulty ? TrailColors.accent : TrailColors.surfaceAlt)),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      Text('+$xp XP', style: TextStyle(color: TrailColors.accent, fontSize: 11, fontWeight: FontWeight.w700)),
+                      const Spacer(),
+                      Text('${duration}m', style: TextStyle(color: TrailColors.onSurfaceMuted, fontSize: 11)),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ).animate().fadeIn(delay: (index * 40).ms, duration: 300.ms),
+    );
+  }
+
+  Widget _placeholder() => Container(
+    color: TrailColors.surfaceAlt,
+    child: const Center(child: Icon(Icons.landscape_rounded, size: 36, color: Colors.white24)),
+  );
+}

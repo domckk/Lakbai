@@ -1,0 +1,59 @@
+name: lakbai
+description: Lakbai — Gamified Digital Tourism Platform
+publish_to: none
+version: 0.1.0+1
+
+environment:
+  sdk: ">=3.4.0 <4.0.0"
+  flutter: ">=3.24.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # Navigation
+  go_router: ^14.3.0
+
+  # State management
+  flutter_riverpod: ^2.5.2
+  riverpod_annotation: ^2.3.5
+
+  # HTTP / API
+  dio: ^5.7.0
+  flutter_secure_storage: ^9.2.2
+
+
+  # Maps
+  flutter_map: ^7.0.2
+  latlong2: ^0.9.1
+
+  # Location / QR
+  geolocator: ^13.0.2
+  mobile_scanner: ^5.2.3
+
+  # UI / animations
+  cached_network_image: ^3.4.1
+  lottie: ^3.1.2
+  flutter_animate: ^4.5.0
+  google_fonts: ^6.2.1
+  shimmer: ^3.0.0
+
+  # Utils
+  intl: ^0.19.0
+  logger: ^2.4.0
+  collection: ^1.18.0
+  uuid: ^4.4.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+  build_runner: ^2.4.13
+  riverpod_generator: ^2.4.3
+  json_serializable: ^6.8.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/images/
+    - assets/lottie/

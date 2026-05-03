@@ -1,0 +1,38 @@
+{
+  "name": "@trailquest/web",
+  "version": "0.1.0",
+  "description": "Lakbai partner web dashboard",
+  "private": true,
+  "scripts": {
+    "dev": "next dev -p 3001",
+    "build": "next build",
+    "start": "next start -p 3001",
+    "lint": "next lint",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@trailquest/shared-types": "workspace:*",
+    "@types/leaflet": "^1.9.21",
+    "axios": "^1.7.7",
+    "html5-qrcode": "^2.3.8",
+    "leaflet": "^1.9.4",
+    "next": "^14.2.0",
+    "qrcode.react": "^4.2.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-leaflet": "^4.2.1",
+    "recharts": "^2.12.7",
+    "zustand": "^4.5.5"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "@types/react": "^18.3.0",
+    "@types/react-dom": "^18.3.0",
+    "autoprefixer": "^10.4.19",
+    "eslint": "^8.57.0",
+    "eslint-config-next": "^14.2.0",
+    "postcss": "^8.4.38",
+    "tailwindcss": "^3.4.1",
+    "typescript": "^5.6.3"
+  }
+}
