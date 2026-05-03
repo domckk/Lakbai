@@ -1,6 +1,7 @@
 import axios from 'axios';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/v1';
+const rawApiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/v1';
+const API_BASE_URL = /^https?:\/\//i.test(rawApiUrl) ? rawApiUrl : `https://${rawApiUrl}`;
 
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,

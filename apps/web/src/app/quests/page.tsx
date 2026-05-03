@@ -33,7 +33,7 @@ const TYPE_GRADIENT: Record<string, string> = {
 
 export default function QuestsPage() {
   const router = useRouter();
-  const { quests, destinations, setQuests, setDestinations } = useStore();
+  const { quests, destinations, setQuests, setDestinations, selectedDestinationId } = useStore();
   const [loading, setLoading]       = useState(true);
   const [error, setError]           = useState<string | null>(null);
   const [filterType, setFilterType] = useState('');
@@ -46,9 +46,15 @@ export default function QuestsPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  const questTypes = [...new Set(quests.map((q) => q.questType))];
+  const selectedDestination = destinations.find((d) => d.id === selectedDestinationId) ?? null;
 
-  const filtered = quests.filter((q) => {
+  const destinationQuests = selectedDestinationId
+    ? quests.filter((q) => q.destinationId === selectedDestinationId)
+    : [];
+
+  const questTypes = [...new Set(destinationQuests.map((q) => q.questType))];
+
+  const filtered = destinationQuests.filter((q) => {
     if (filterType && q.questType !== filterType)          return false;
     if (filterDiff && q.difficulty !== Number(filterDiff)) return false;
     return true;
@@ -56,15 +62,65 @@ export default function QuestsPage() {
 
   const hasFilters = filterType || filterDiff;
 
+  if (!loading && !selectedDestinationId) {
+    return (
+      <AuthGuard>
+        <div className="flex bg-trail-cream min-h-screen">
+          <Sidebar />
+          <main className="flex-1 min-w-0">
+            <PageHeader title="Quests" subtitle="Pick a mission and start exploring" />
+            <div className="flex flex-col items-center justify-center py-32 px-6 text-center">
+              <p className="text-6xl mb-4">🗺️</p>
+              <h2 className="text-xl font-bold text-trail-brown mb-2">Choose a destination first</h2>
+              <p className="text-sm text-gray-500 mb-6 max-w-xs">
+                Quests are tied to a destination. Pick one to see the missions available there.
+              </p>
+              <button
+                onClick={() => router.push('/destinations')}
+                className="px-6 py-3 rounded-xl bg-trail-orange text-white font-semibold text-sm
+                           hover:bg-trail-orange-dark transition-colors active:scale-95"
+              >
+                Browse Destinations →
+              </button>
+            </div>
+            <MobileNav />
+          </main>
+        </div>
+      </AuthGuard>
+    );
+  }
+
   return (
     <AuthGuard>
       <div className="flex bg-trail-cream min-h-screen">
         <Sidebar />
         <main className="flex-1 min-w-0">
 
-          <PageHeader title="Quests" subtitle="Pick a mission and start exploring" />
+          <PageHeader
+            title="Quests"
+            subtitle={selectedDestination ? `Exploring ${selectedDestination.name}` : 'Pick a mission and start exploring'}
+          />
 
           <div className="px-4 md:px-8 py-4 md:py-6 pb-24 md:pb-6">
+
+            {/* Destination banner */}
+            {selectedDestination && (
+              <div className="flex items-center justify-between gap-3 bg-white border border-gray-100 rounded-xl px-4 py-3 mb-4 shadow-sm">
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="text-lg">📍</span>
+                  <div className="min-w-0">
+                    <p className="text-xs text-gray-400 font-medium leading-none mb-0.5">Current destination</p>
+                    <p className="text-sm font-bold text-trail-brown truncate">{selectedDestination.name}</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => router.push('/destinations')}
+                  className="shrink-0 text-xs font-semibold text-trail-orange hover:underline"
+                >
+                  Change →
+                </button>
+              </div>
+            )}
 
             {/* Filters — type + difficulty only */}
             <div className="flex flex-wrap gap-2 items-center mb-5">
@@ -124,7 +180,11 @@ export default function QuestsPage() {
               <div className="text-center py-20 text-gray-400">
                 <p className="text-5xl mb-3">📍</p>
                 <p className="text-lg font-medium text-trail-brown mb-1">No quests found</p>
-                <p className="text-sm">{hasFilters ? 'Try adjusting your filters.' : 'Quests will appear here once added.'}</p>
+                <p className="text-sm">
+                  {hasFilters
+                    ? 'Try adjusting your filters.'
+                    : `No quests available for ${selectedDestination?.name ?? 'this destination'} yet.`}
+                </p>
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">

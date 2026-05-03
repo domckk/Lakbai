@@ -40,7 +40,9 @@ function xpForNextLevel(level: number): number {
   return Math.floor(100 * Math.pow(level, 1.5));
 }
 
-const API_ORIGIN = (process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000/v1').replace(/\/v1$/, '');
+const _rawOriginUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000/v1';
+const _normalizedOriginUrl = /^https?:\/\//i.test(_rawOriginUrl) ? _rawOriginUrl : `https://${_rawOriginUrl}`;
+const API_ORIGIN = _normalizedOriginUrl.replace(/\/v1$/, '');
 
 function resolveAvatarUrl(url: string): string {
   if (!url) return '';

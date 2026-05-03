@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import dynamic from 'next/dynamic';
+import { useRouter } from 'next/navigation';
 import { Sidebar } from '@/components/Sidebar';
 import { MobileNav } from '@/components/MobileNav';
 import { PageHeader } from '@/components/PageHeader';
@@ -54,7 +55,8 @@ const TYPE_ICON: Record<string, string> = {
 };
 
 export default function DestinationsPage() {
-  const { destinations, quests, setDestinations } = useStore();
+  const { destinations, quests, setDestinations, setSelectedDestinationId } = useStore();
+  const router = useRouter();
   const [loading, setLoading]             = useState(true);
   const [error, setError]                 = useState<string | null>(null);
   const [selected, setSelected]           = useState<DestinationDetail | null>(null);
@@ -68,6 +70,7 @@ export default function DestinationsPage() {
   }, []);
 
   const handleSelect = (dest: typeof destinations[0]) => {
+    setSelectedDestinationId(dest.id);
     setDetailLoading(true);
     setSelected(null);
     apiClient.get(`/destinations/${dest.slug}`)
@@ -230,20 +233,35 @@ export default function DestinationsPage() {
                         <h3 className="font-bold text-trail-brown text-sm mb-3">Available Quests</h3>
                         <div className="space-y-2">
                           {selected.featuredQuests.map((q) => (
-                            <div key={q.id} className="flex items-center gap-3 p-3 bg-trail-cream rounded-xl">
+                            <div
+                              key={q.id}
+                              onClick={() => router.push(`/checkpoints?questId=${q.id}`)}
+                              className="flex items-center gap-3 p-3 bg-trail-cream rounded-xl cursor-pointer
+                                         hover:bg-trail-peach hover:shadow-sm transition-all group"
+                            >
                               <div className="w-10 h-10 rounded-lg bg-white flex items-center justify-center text-xl shadow-sm shrink-0">
                                 {TYPE_ICON[q.questType] ?? '🎯'}
                               </div>
                               <div className="flex-1 min-w-0">
-                                <p className="text-sm font-semibold text-trail-brown truncate">{q.title}</p>
+                                <p className="text-sm font-semibold text-trail-brown truncate group-hover:text-trail-orange transition-colors">{q.title}</p>
                                 <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${DIFF_COLOR[q.difficulty] ?? 'bg-gray-100 text-gray-600'}`}>
                                   {DIFF_LABEL[q.difficulty] ?? `Lv${q.difficulty}`}
                                 </span>
                               </div>
-                              <span className="text-sm font-bold text-trail-orange shrink-0">+{q.xpReward} XP</span>
+                              <div className="flex items-center gap-1.5 shrink-0">
+                                <span className="text-sm font-bold text-trail-orange">+{q.xpReward} XP</span>
+                                <span className="text-trail-orange text-xs opacity-0 group-hover:opacity-100 transition-opacity">→</span>
+                              </div>
                             </div>
                           ))}
                         </div>
+                        <button
+                          onClick={() => router.push('/quests')}
+                          className="mt-4 w-full py-2.5 rounded-xl bg-trail-orange text-white text-sm font-semibold
+                                     hover:bg-trail-orange-dark transition-colors active:scale-95"
+                        >
+                          View all quests →
+                        </button>
                       </div>
                     )}
                   </div>

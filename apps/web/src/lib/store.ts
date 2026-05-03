@@ -49,6 +49,7 @@ interface StoreState {
   loading: boolean;
   error: string | null;
   qrScannerOpen: boolean;
+  selectedDestinationId: string | null;
 
   setUser: (user: AuthUser | null) => void;
   logout: () => void;
@@ -57,6 +58,7 @@ interface StoreState {
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
   setQrScannerOpen: (open: boolean) => void;
+  setSelectedDestinationId: (id: string | null) => void;
 }
 
 export const useStore = create<StoreState>((set) => ({
@@ -67,18 +69,29 @@ export const useStore = create<StoreState>((set) => ({
   loading: false,
   error: null,
   qrScannerOpen: false,
+  selectedDestinationId: typeof window !== 'undefined'
+    ? (localStorage.getItem('selectedDestinationId') ?? null)
+    : null,
 
   setUser: (user) => set({ user, isAuthenticated: !!user }),
   logout: () => {
     if (typeof window !== 'undefined') {
       localStorage.removeItem('access_token');
       localStorage.removeItem('refresh_token');
+      localStorage.removeItem('selectedDestinationId');
     }
-    set({ user: null, isAuthenticated: false, destinations: [], quests: [] });
+    set({ user: null, isAuthenticated: false, destinations: [], quests: [], selectedDestinationId: null });
   },
   setDestinations: (destinations) => set({ destinations }),
   setQuests: (quests) => set({ quests }),
   setLoading: (loading) => set({ loading }),
   setError: (error) => set({ error }),
   setQrScannerOpen: (open) => set({ qrScannerOpen: open }),
+  setSelectedDestinationId: (id) => {
+    if (typeof window !== 'undefined') {
+      if (id) localStorage.setItem('selectedDestinationId', id);
+      else localStorage.removeItem('selectedDestinationId');
+    }
+    set({ selectedDestinationId: id });
+  },
 }));
