@@ -5,6 +5,17 @@ import 'package:go_router/go_router.dart';
 import '../../core/api/api_client.dart';
 import '../../core/theme/colors.dart';
 
+const _localImages = [
+  'assets/images/bangui.jpg',
+  'assets/images/paoay-church.jpg',
+  'assets/images/kapurpurawan.jpg',
+  'assets/images/pagudpud.jpg',
+  'assets/images/paoay-lake.jpg',
+  'assets/images/laoag-sand_dunes.jpg',
+  'assets/images/batac-riverside.jpg',
+  'assets/images/vintar.jpg',
+];
+
 class DestinationsScreen extends StatefulWidget {
   const DestinationsScreen({super.key});
 
@@ -83,7 +94,7 @@ class _DestCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final coverUrl = dest['coverImageUrl'] as String?;
+    final coverUrl = (dest['heroImageUrl'] ?? dest['coverImageUrl']) as String?;
     final questCount = (dest['questCount'] as int?) ?? 0;
 
     return GestureDetector(
@@ -104,9 +115,9 @@ class _DestCard extends StatelessWidget {
                       imageUrl: coverUrl,
                       fit: BoxFit.cover,
                       width: double.infinity,
-                      errorWidget: (_, __, ___) => _placeholder(),
+                      errorWidget: (_, __, ___) => _localFallback(index),
                     )
-                  : _placeholder(),
+                  : _localFallback(index),
             ),
             Padding(
               padding: const EdgeInsets.all(12),
@@ -133,9 +144,14 @@ class _DestCard extends StatelessWidget {
     );
   }
 
-  Widget _placeholder() => Container(
-    color: TrailColors.surfaceAlt,
-    child: const Center(child: Icon(Icons.landscape_rounded, size: 40, color: Colors.white24)),
+  Widget _localFallback(int idx) => Image.asset(
+    _localImages[idx % _localImages.length],
+    fit: BoxFit.cover,
+    width: double.infinity,
+    errorBuilder: (_, __, ___) => Container(
+      color: TrailColors.surfaceAlt,
+      child: const Center(child: Icon(Icons.landscape_rounded, size: 40, color: Colors.white24)),
+    ),
   );
 }
 
@@ -171,7 +187,7 @@ class _DestinationSheetState extends State<_DestinationSheet> {
   @override
   Widget build(BuildContext context) {
     final dest = widget.dest;
-    final coverUrl = dest['coverImageUrl'] as String?;
+    final coverUrl = (dest['heroImageUrl'] ?? dest['coverImageUrl']) as String?;
 
     return DraggableScrollableSheet(
       initialChildSize: 0.75,

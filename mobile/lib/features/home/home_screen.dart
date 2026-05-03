@@ -80,7 +80,13 @@ class _HomeScreenState extends State<HomeScreen> {
     return SliverAppBar(
       backgroundColor: TrailColors.background,
       floating: true,
-      title: const Text('Lakbai', style: TextStyle(fontWeight: FontWeight.w700)),
+      title: Row(
+        children: [
+          Image.asset('assets/images/logo.png', height: 28, errorBuilder: (_, __, ___) => const SizedBox()),
+          const SizedBox(width: 8),
+          const Text('Lakbai', style: TextStyle(fontWeight: FontWeight.w700)),
+        ],
+      ),
       actions: [
         IconButton(
           icon: const Icon(Icons.notifications_outlined, color: TrailColors.onBackground),

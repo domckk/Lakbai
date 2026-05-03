@@ -73,6 +73,10 @@ class _LoginScreenState extends State<LoginScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const SizedBox(height: 48),
+                Center(
+                  child: Image.asset('assets/images/logo.png', width: 120, errorBuilder: (_, __, ___) => const SizedBox()),
+                ),
+                const SizedBox(height: 16),
                 Text('Lakbai', style: Theme.of(context).textTheme.displayMedium),
                 Text(
                   _isRegister ? 'Create your account' : 'Welcome back, explorer',
