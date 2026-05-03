@@ -245,7 +245,7 @@ export function QrScannerModal() {
           style={{ paddingBottom: 'env(safe-area-inset-bottom, 20px)' }}
         >
           <span className="text-6xl">📷</span>
-          <h3 className="text-white text-xl font-bold">Couldn't Scan</h3>
+          <h3 className="text-white text-xl font-bold">Couldn&apos;t Scan</h3>
           <p className="text-white/60 text-sm max-w-xs leading-relaxed">{errMsg}</p>
           <button
             onClick={close}

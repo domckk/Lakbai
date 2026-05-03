@@ -256,7 +256,7 @@ export default function PassportsPage() {
                       <div className="mt-5 bg-green-50 border border-green-200 rounded-2xl p-4 text-center">
                         <p className="text-3xl mb-1">🎉</p>
                         <p className="text-sm font-bold text-green-700">Passport Complete!</p>
-                        <p className="text-xs text-green-600 mt-1">You've collected all stamps.</p>
+                        <p className="text-xs text-green-600 mt-1">You&apos;ve collected all stamps.</p>
                       </div>
                     )}
                   </div>

@@ -142,7 +142,7 @@ export default function DashboardPage() {
                   Hey, {user?.displayName ?? user?.username ?? 'Explorer'}
                 </h1>
                 <p className="text-xs md:text-sm text-gray-400 mt-0.5 hidden sm:block">
-                  Here's what's happening on Lakbai today
+                  Here&apos;s what&apos;s happening on Lakbai today
                 </p>
               </div>
 
