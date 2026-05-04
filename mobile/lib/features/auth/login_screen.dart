@@ -79,16 +79,6 @@ class _LoginScreenState extends State<LoginScreen> {
                           fit: BoxFit.cover,
                         ),
                       ),
-                      const SizedBox(height: 16),
-                      const Text(
-                        'Lakbai',
-                        style: TextStyle(
-                          fontFamily: 'SpaceGrotesk',
-                          fontSize: 32,
-                          fontWeight: FontWeight.w800,
-                          color: TrailColors.onBackground,
-                        ),
-                      ),
                     ],
                   ),
                 ).animate().fadeIn(duration: 400.ms).slideY(begin: -0.1),

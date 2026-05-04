@@ -86,7 +86,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
 
               // ── App name ───────────────────────────────────────────────
               const Text(
-                'TrailQuest',
+                'Lakbai',
                 style: TextStyle(
                   color: Colors.white,
                   fontSize: 34,

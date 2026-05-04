@@ -307,6 +307,21 @@ class _ActiveQuestScreenState extends State<ActiveQuestScreen>
                   },
                 ),
 
+              // User GPS accuracy halo
+              if (userPoint != null && (_pos?.accuracy ?? 0) > 0)
+                CircleLayer(
+                  circles: [
+                    CircleMarker(
+                      point: userPoint!,
+                      radius: _pos!.accuracy,
+                      useRadiusInMeter: true,
+                      color: const Color(0xFF2563EB).withOpacity(0.12),
+                      borderColor: const Color(0xFF2563EB).withOpacity(0.40),
+                      borderStrokeWidth: 1.5,
+                    ),
+                  ],
+                ),
+
               // Target checkpoint pin
               if (cpPoint != null)
                 MarkerLayer(
