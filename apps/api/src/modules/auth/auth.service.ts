@@ -55,6 +55,14 @@ export class AuthService {
     return this.issueTokens(user.id, user.email, user.role as JwtPayload['role']);
   }
 
+  async logout(refreshToken: string) {
+    const tokenHash = this.hashToken(refreshToken);
+    await this.db
+      .update(refreshTokens)
+      .set({ revokedAt: new Date() })
+      .where(and(eq(refreshTokens.tokenHash, tokenHash), isNull(refreshTokens.revokedAt)));
+  }
+
   async refresh(refreshToken: string) {
     const tokenHash = this.hashToken(refreshToken);
     const [row] = await this.db

@@ -1,10 +1,27 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_animate/flutter_animate.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/api/api_client.dart';
+import '../../core/config.dart';
+import '../../core/providers/destination_provider.dart';
 import '../../core/theme/colors.dart';
 
+// Slug-specific covers — used before falling back to the index-based list.
+const _slugImages = <String, String>{
+  'ilocos-norte':  'assets/images/ilocos-norte.jpg',
+  'ilocos_norte':  'assets/images/ilocos-norte.jpg',
+  'batac':         'assets/images/batac-riverside.jpg',
+  'bangui':        'assets/images/bangui.jpg',
+  'paoay':         'assets/images/paoay-church.jpg',
+  'kapurpurawan':  'assets/images/kapurpurawan.jpg',
+  'pagudpud':      'assets/images/pagudpud.jpg',
+  'paoay-lake':    'assets/images/paoay-lake.jpg',
+  'laoag':         'assets/images/laoag-sand_dunes.jpg',
+  'vintar':        'assets/images/vintar.jpg',
+};
+
+// Index-based fallback list (used when no slug match found).
 const _localImages = [
   'assets/images/bangui.jpg',
   'assets/images/paoay-church.jpg',
@@ -16,18 +33,17 @@ const _localImages = [
   'assets/images/vintar.jpg',
 ];
 
-class DestinationsScreen extends StatefulWidget {
+class DestinationsScreen extends ConsumerStatefulWidget {
   const DestinationsScreen({super.key});
 
   @override
-  State<DestinationsScreen> createState() => _DestinationsScreenState();
+  ConsumerState<DestinationsScreen> createState() => _DestinationsScreenState();
 }
 
-class _DestinationsScreenState extends State<DestinationsScreen> {
+class _DestinationsScreenState extends ConsumerState<DestinationsScreen> {
   final _dio = buildDio();
   List<dynamic> _destinations = [];
   bool _loading = true;
-  String? _chosenDestId;
 
   @override
   void initState() {
@@ -38,8 +54,8 @@ class _DestinationsScreenState extends State<DestinationsScreen> {
   Future<void> _load() async {
     try {
       final res = await _dio.get('/destinations');
-      setState(() => _destinations = res.data as List);
-    } finally {
+      if (mounted) setState(() { _destinations = res.data as List; _loading = false; });
+    } catch (_) {
       if (mounted) setState(() => _loading = false);
     }
   }
@@ -52,7 +68,14 @@ class _DestinationsScreenState extends State<DestinationsScreen> {
       builder: (_) => _DestinationSheet(
         dest: dest,
         onChosen: (id) {
-          setState(() => _chosenDestId = id);
+          // Optimistic update — UI responds instantly
+          ref.read(activeDestinationProvider.notifier).choose(ActiveDestination(
+            id: id,
+            slug: dest['slug'] as String? ?? id,
+            name: dest['name'] as String? ?? '',
+          ));
+          // Persist to the user's profile in the database (fire-and-forget)
+          _dio.patch('/me', data: {'activeDestinationId': id}).catchError((_) {});
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Row(
@@ -63,7 +86,6 @@ class _DestinationsScreenState extends State<DestinationsScreen> {
                 ],
               ),
               duration: const Duration(seconds: 2),
-              behavior: SnackBarBehavior.floating,
             ),
           );
         },
@@ -82,6 +104,7 @@ class _DestinationsScreenState extends State<DestinationsScreen> {
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : RefreshIndicator(
+              color: TrailColors.primary,
               onRefresh: _load,
               child: _destinations.isEmpty
                   ? Center(child: Text('No destinations yet', style: TextStyle(color: TrailColors.onSurfaceMuted)))
@@ -94,12 +117,16 @@ class _DestinationsScreenState extends State<DestinationsScreen> {
                         mainAxisSpacing: 12,
                       ),
                       itemCount: _destinations.length,
-                      itemBuilder: (_, i) => _DestCard(
-                        dest: _destinations[i] as Map<String, dynamic>,
-                        index: i,
-                        isChosen: _chosenDestId == (_destinations[i] as Map<String, dynamic>)['id']?.toString(),
-                        onTap: () => _showDetail(_destinations[i] as Map<String, dynamic>),
-                      ),
+                      itemBuilder: (_, i) {
+                        final dest = _destinations[i] as Map<String, dynamic>;
+                        final chosenId = ref.watch(activeDestinationProvider)?.id;
+                        return _DestCard(
+                          dest: dest,
+                          index: i,
+                          isChosen: chosenId == dest['id']?.toString(),
+                          onTap: () => _showDetail(dest),
+                        );
+                      },
                     ),
             ),
     );
@@ -115,19 +142,22 @@ class _DestCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final coverUrl = (dest['heroImageUrl'] ?? dest['coverImageUrl']) as String?;
-    final questCount = (dest['questCount'] as int?) ?? 0;
+    final coverUrl   = (dest['heroImageUrl'] ?? dest['coverImageUrl']) as String?;
+    final questCount = (dest['questCount'] as num?)?.toInt() ?? 0;
 
     return GestureDetector(
       onTap: onTap,
       child: Container(
         decoration: BoxDecoration(
           color: TrailColors.surface,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(18),
           border: Border.all(
-            color: isChosen ? TrailColors.primary.withOpacity(0.6) : Colors.white.withOpacity(0.05),
+            color: isChosen ? TrailColors.orange : TrailColors.peach,
             width: isChosen ? 2 : 1,
           ),
+          boxShadow: const [
+            BoxShadow(color: TrailColors.peach60, blurRadius: 10, offset: Offset(0, 3)),
+          ],
         ),
         clipBehavior: Clip.hardEdge,
         child: Column(
@@ -139,21 +169,18 @@ class _DestCard extends StatelessWidget {
                 children: [
                   coverUrl != null
                       ? CachedNetworkImage(
-                          imageUrl: coverUrl,
+                          imageUrl: AppConfig.imageUrl(coverUrl),
                           fit: BoxFit.cover,
                           width: double.infinity,
                           errorWidget: (_, __, ___) => _localFallback(index),
                         )
-                      : _localFallback(index),
+                      : _localFallback(index, slug: dest['slug'] as String?),
                   if (isChosen)
                     Positioned(
-                      top: 8, right: 8,
+                      top: 8, left: 8,
                       child: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: TrailColors.primary,
-                          borderRadius: BorderRadius.circular(20),
-                        ),
+                        decoration: BoxDecoration(color: TrailColors.primary, borderRadius: BorderRadius.circular(20)),
                         child: const Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
@@ -172,15 +199,15 @@ class _DestCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(dest['name'] ?? '', style: const TextStyle(color: TrailColors.onBackground, fontWeight: FontWeight.w600, fontSize: 14), maxLines: 1, overflow: TextOverflow.ellipsis),
+                  Text(dest['name'] ?? '', style: const TextStyle(color: TrailColors.onBackground, fontWeight: FontWeight.w700, fontSize: 13), maxLines: 1, overflow: TextOverflow.ellipsis),
                   const SizedBox(height: 2),
-                  Text(dest['region'] ?? '', style: TextStyle(color: TrailColors.onSurfaceMuted, fontSize: 11), maxLines: 1, overflow: TextOverflow.ellipsis),
+                  Text(dest['region'] ?? '', style: const TextStyle(color: TrailColors.onSurfaceMuted, fontSize: 11), maxLines: 1, overflow: TextOverflow.ellipsis),
                   const SizedBox(height: 6),
                   Row(
                     children: [
-                      Icon(Icons.flag_rounded, size: 12, color: TrailColors.primary),
+                      const Icon(Icons.flag_rounded, size: 12, color: TrailColors.primary),
                       const SizedBox(width: 4),
-                      Text('$questCount quests', style: TextStyle(color: TrailColors.primary, fontSize: 11, fontWeight: FontWeight.w600)),
+                      Text('$questCount quests', style: const TextStyle(color: TrailColors.primary, fontSize: 11, fontWeight: FontWeight.w600)),
                     ],
                   ),
                 ],
@@ -188,19 +215,23 @@ class _DestCard extends StatelessWidget {
             ),
           ],
         ),
-      ).animate().fadeIn(delay: (index * 50).ms, duration: 300.ms),
+      ),
     );
   }
 
-  Widget _localFallback(int idx) => Image.asset(
-    _localImages[idx % _localImages.length],
-    fit: BoxFit.cover,
-    width: double.infinity,
-    errorBuilder: (_, __, ___) => Container(
-      color: TrailColors.surfaceAlt,
-      child: const Center(child: Icon(Icons.landscape_rounded, size: 40, color: Colors.white24)),
-    ),
-  );
+  Widget _localFallback(int idx, {String? slug}) {
+    final asset = (slug != null ? _slugImages[slug] : null)
+        ?? _localImages[idx % _localImages.length];
+    return Image.asset(
+      asset,
+      fit: BoxFit.cover,
+      width: double.infinity,
+      errorBuilder: (_, __, ___) => Container(
+        color: TrailColors.surfaceAlt,
+        child: const Center(child: Icon(Icons.landscape_rounded, size: 40, color: TrailColors.onSurfaceMuted)),
+      ),
+    );
+  }
 }
 
 class _DestinationSheet extends StatefulWidget {
@@ -245,7 +276,7 @@ class _DestinationSheetState extends State<_DestinationSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final dest = widget.dest;
+    final dest     = widget.dest;
     final coverUrl = (dest['heroImageUrl'] ?? dest['coverImageUrl']) as String?;
 
     return DraggableScrollableSheet(
@@ -264,14 +295,10 @@ class _DestinationSheetState extends State<_DestinationSheet> {
               child: Container(
                 margin: const EdgeInsets.only(top: 12),
                 width: 40, height: 4,
-                decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(2)),
+                decoration: BoxDecoration(color: TrailColors.peach, borderRadius: BorderRadius.circular(2)),
               ),
             ),
-            if (coverUrl != null)
-              ClipRRect(
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(0)),
-                child: CachedNetworkImage(imageUrl: coverUrl, height: 180, fit: BoxFit.cover, width: double.infinity),
-              ),
+            _buildSheetCover(dest, coverUrl),
             Padding(
               padding: const EdgeInsets.all(20),
               child: Column(
@@ -279,51 +306,56 @@ class _DestinationSheetState extends State<_DestinationSheet> {
                 children: [
                   Text(dest['name'] ?? '', style: Theme.of(context).textTheme.titleLarge),
                   const SizedBox(height: 4),
-                  Text(dest['region'] ?? '', style: TextStyle(color: TrailColors.onSurfaceMuted)),
+                  Row(
+                    children: [
+                      const Icon(Icons.place_rounded, size: 14, color: TrailColors.onSurfaceMuted),
+                      const SizedBox(width: 4),
+                      Text(dest['region'] ?? '', style: const TextStyle(color: TrailColors.onSurfaceMuted, fontSize: 13)),
+                    ],
+                  ),
                   if (dest['description'] != null) ...[
                     const SizedBox(height: 12),
-                    Text(dest['description'], style: TextStyle(color: TrailColors.onSurface, height: 1.5)),
+                    Text(dest['description'], style: const TextStyle(color: TrailColors.onSurface, height: 1.5, fontSize: 14)),
                   ],
                   const SizedBox(height: 20),
-                  Text('Quests', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontSize: 16)),
+                  const Text('Available Quests', style: TextStyle(color: TrailColors.onBackground, fontWeight: FontWeight.w700, fontSize: 15)),
                   const SizedBox(height: 12),
                   if (_loading)
                     const Center(child: CircularProgressIndicator())
                   else if (_quests.isEmpty)
-                    Text('No quests available', style: TextStyle(color: TrailColors.onSurfaceMuted))
+                    Container(
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(color: TrailColors.surfaceAlt, borderRadius: BorderRadius.circular(12)),
+                      child: const Center(child: Text('No quests available', style: TextStyle(color: TrailColors.onSurfaceMuted))),
+                    )
                   else
                     ..._quests.map((q) {
-                      final quest = q as Map<String, dynamic>;
-                      final type = (quest['questType'] as String?) ?? 'landmark';
+                      final quest      = q as Map<String, dynamic>;
+                      final type       = (quest['questType'] as String?) ?? 'landmark';
                       final difficulty = (quest['difficulty'] as int?) ?? 1;
                       return GestureDetector(
                         onTap: () {
-                          final destId = widget.dest['id']?.toString() ?? '';
-                          widget.onChosen?.call(destId);
+                          widget.onChosen?.call(widget.dest['id']?.toString() ?? '');
                           Navigator.pop(context);
-                          context.go('/quests/${quest['id']}');
+                          context.push('/quests/${quest['id']}');
                         },
                         child: Container(
                           margin: const EdgeInsets.only(bottom: 10),
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
-                            color: TrailColors.background,
-                            borderRadius: BorderRadius.circular(12),
+                            color: TrailColors.surfaceAlt,
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(color: TrailColors.peach),
                           ),
                           child: Row(
                             children: [
                               Container(
                                 width: 40, height: 40,
                                 decoration: BoxDecoration(
-                                  color: TrailColors.primary.withOpacity(0.15),
+                                  color: TrailColors.primary.withOpacity(0.12),
                                   borderRadius: BorderRadius.circular(10),
                                 ),
-                                child: Center(
-                                  child: Text(
-                                    _typeEmoji(type),
-                                    style: const TextStyle(fontSize: 18),
-                                  ),
-                                ),
+                                child: Center(child: Text(_typeEmoji(type), style: const TextStyle(fontSize: 18))),
                               ),
                               const SizedBox(width: 12),
                               Expanded(
@@ -334,9 +366,9 @@ class _DestinationSheetState extends State<_DestinationSheet> {
                                     const SizedBox(height: 3),
                                     Row(
                                       children: [
-                                        ...List.generate(5, (i) => Icon(Icons.star_rounded, size: 9, color: i < difficulty ? TrailColors.accent : TrailColors.surfaceAlt)),
+                                        ...List.generate(5, (i) => Icon(Icons.star_rounded, size: 9, color: i < difficulty ? TrailColors.accent : TrailColors.peach)),
                                         const SizedBox(width: 6),
-                                        Text('+${quest['xpReward'] ?? 0} XP', style: TextStyle(color: TrailColors.accent, fontSize: 11, fontWeight: FontWeight.w700)),
+                                        Text('+${quest['xpReward'] ?? 0} XP', style: const TextStyle(color: TrailColors.primary, fontSize: 11, fontWeight: FontWeight.w700)),
                                       ],
                                     ),
                                   ],
@@ -349,16 +381,32 @@ class _DestinationSheetState extends State<_DestinationSheet> {
                       );
                     }),
                   const SizedBox(height: 8),
-                  FilledButton(
+                  FilledButton.tonal(
+                    style: FilledButton.styleFrom(minimumSize: const Size(double.infinity, 48)),
                     onPressed: () {
-                      final slug = widget.dest['slug'] as String? ?? '';
-                      final name = widget.dest['name'] as String? ?? '';
+                      widget.onChosen?.call(widget.dest['id']?.toString() ?? '');
+                      Navigator.pop(context);
+                    },
+                    child: const Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.place_rounded, size: 18),
+                        SizedBox(width: 8),
+                        Text('Set as my destination'),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  FilledButton(
+                    style: FilledButton.styleFrom(minimumSize: const Size(double.infinity, 48)),
+                    onPressed: () {
+                      final slug   = widget.dest['slug'] as String? ?? '';
+                      final name   = widget.dest['name'] as String? ?? '';
                       final destId = widget.dest['id']?.toString() ?? '';
                       widget.onChosen?.call(destId);
                       Navigator.pop(context);
                       context.go('/quests?destination=$slug&destinationName=${Uri.encodeComponent(name)}');
                     },
-                    style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(48)),
                     child: const Text('View all quests →'),
                   ),
                 ],
@@ -367,6 +415,31 @@ class _DestinationSheetState extends State<_DestinationSheet> {
           ],
         ),
       ),
+    );
+  }
+
+  // Cover image: network URL if available, local asset by slug, else nothing.
+  Widget _buildSheetCover(Map<String, dynamic> dest, String? coverUrl) {
+    if (coverUrl != null) {
+      return ClipRRect(
+        child: CachedNetworkImage(
+          imageUrl: AppConfig.imageUrl(coverUrl),
+          height: 180,
+          fit: BoxFit.cover,
+          width: double.infinity,
+          errorWidget: (_, __, ___) => _slugFallback(dest),
+        ),
+      );
+    }
+    return _slugFallback(dest);
+  }
+
+  Widget _slugFallback(Map<String, dynamic> dest) {
+    final slug  = dest['slug'] as String?;
+    final asset = slug != null ? _slugImages[slug] : null;
+    if (asset == null) return const SizedBox.shrink();
+    return ClipRRect(
+      child: Image.asset(asset, height: 180, fit: BoxFit.cover, width: double.infinity),
     );
   }
 }

@@ -22,5 +22,6 @@ export class CheckInDto {
 
   @IsOptional()
   @IsNumber()
+  @Min(0)
   client_ts?: number;
 }

@@ -10,7 +10,7 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiBearerAuth, ApiConsumes, ApiTags } from '@nestjs/swagger';
-import { IsOptional, IsString, MaxLength } from 'class-validator';
+import { IsOptional, IsString, IsUUID, MaxLength } from 'class-validator';
 import { diskStorage } from 'multer';
 import { extname, join } from 'path';
 import { existsSync, mkdirSync } from 'fs';
@@ -21,6 +21,7 @@ class UpdateProfileDto {
   @IsOptional() @IsString() @MaxLength(64) displayName?: string;
   @IsOptional() @IsString() @MaxLength(64) homeRegion?: string;
   @IsOptional() @IsString() avatarUrl?: string;
+  @IsOptional() @IsUUID() activeDestinationId?: string;
 }
 
 const avatarStorage = diskStorage({

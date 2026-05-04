@@ -4,7 +4,14 @@
       "PowerShell(Get-ChildItem -Path \"c:\\\\Dev\\\\TrailQuest\" -Force | Select-Object Name, @{Name=\"Type\"; Expression={if\\($_.PSIsContainer\\){\"DIR\"}else{\"FILE\"}}} | Format-Table -AutoSize)",
       "PowerShell(Get-ChildItem -Path \"c:\\\\Dev\\\\TrailQuest\\\\apps\" -Force | Select-Object Name, @{Name=\"Type\"; Expression={if\\($_.PSIsContainer\\){\"DIR\"}else{\"FILE\"}}})",
       "PowerShell(dir \"c:\\\\Dev\\\\TrailQuest\\\\android\", \"c:\\\\Dev\\\\TrailQuest\\\\ios\" -Recurse -Depth 1 2>$null | Select-Object Name, Directory | Where-Object {$_.Name -ne 'Directory' -and $_.Name -ne ''})",
-      "PowerShell($env:PATH = $env:PATH + \";C:\\\\tools\\\\flutter\\\\bin\"; flutter doctor --android-only 2>&1 | Out-String)"
+      "PowerShell($env:PATH = $env:PATH + \";C:\\\\tools\\\\flutter\\\\bin\"; flutter doctor --android-only 2>&1 | Out-String)",
+      "Bash(pnpm add *)",
+      "Bash(node *)",
+      "Bash(Get-ChildItem -Path \"c:\\\\Dev\\\\TrailQuest\" -Recurse -Directory)",
+      "Bash(Select-Object -ExpandProperty FullName)",
+      "Bash(flutter doctor *)",
+      "PowerShell(Get-Process *)",
+      "PowerShell(Get-CimInstance *)"
     ]
   }
 }

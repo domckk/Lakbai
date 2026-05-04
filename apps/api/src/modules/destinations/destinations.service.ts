@@ -12,20 +12,25 @@ export class DestinationsService {
       id: string; slug: string; name: string; region: string | null;
       country_code: string; description: string | null;
       hero_image_url: string | null; is_active: boolean;
-      lat: number | null; lng: number | null;
+      lat: number | null; lng: number | null; quest_count: string;
     }>(sql`
-      SELECT id, slug, name, region, country_code, description, hero_image_url, is_active,
-             ST_Y(ST_Centroid(bounds::geometry)) AS lat,
-             ST_X(ST_Centroid(bounds::geometry)) AS lng
-      FROM ${destinations}
-      WHERE is_active = true
-      ORDER BY name
+      SELECT d.id, d.slug, d.name, d.region, d.country_code, d.description,
+             d.hero_image_url, d.is_active,
+             ST_Y(ST_Centroid(d.bounds::geometry)) AS lat,
+             ST_X(ST_Centroid(d.bounds::geometry)) AS lng,
+             COUNT(q.id) AS quest_count
+      FROM ${destinations} d
+      LEFT JOIN ${quests} q ON q.destination_id = d.id
+      WHERE d.is_active = true
+      GROUP BY d.id
+      ORDER BY d.name
     `);
     return rows.rows.map((r) => ({
       id: r.id, slug: r.slug, name: r.name, region: r.region,
       countryCode: r.country_code, description: r.description,
       heroImageUrl: r.hero_image_url, isActive: r.is_active,
       lat: r.lat, lng: r.lng,
+      questCount: Number(r.quest_count),
     }));
   }
 

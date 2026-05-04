@@ -4,9 +4,10 @@ import { CheckpointsService } from './checkpoints.service';
 import { QrService } from './qr.service';
 import { AntiCheatService } from './anti-cheat.service';
 import { ProgressionModule } from '../progression/progression.module';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
-  imports: [ProgressionModule],
+  imports: [ProgressionModule, NotificationsModule],
   controllers: [CheckpointsController],
   providers: [CheckpointsService, QrService, AntiCheatService],
   exports: [CheckpointsService, QrService],

@@ -5,6 +5,7 @@ import { checkpointVisits, checkpoints, quests, userQuests, userStamps } from '.
 import { QrService } from './qr.service';
 import { AntiCheatService } from './anti-cheat.service';
 import { ProgressionService } from '../progression/progression.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import type { CheckInDto } from './dto';
 
 export interface CheckInResult {
@@ -25,6 +26,7 @@ export class CheckpointsService {
     private readonly qr: QrService,
     private readonly antiCheat: AntiCheatService,
     private readonly progression: ProgressionService,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   async checkIn(userId: string, checkpointId: string, dto: CheckInDto): Promise<CheckInResult> {
@@ -110,7 +112,42 @@ export class CheckpointsService {
       return events;
     });
 
+    this._createNotifications(userId, cp.questId, result).catch(() => {});
     return { valid: true, ...result };
+  }
+
+  private async _createNotifications(
+    userId: string,
+    questId: string,
+    result: Omit<CheckInResult, 'valid'>,
+  ) {
+    if (result.xp_awarded) {
+      const body = result.stamp
+        ? `You collected the "${result.stamp.name}" stamp.`
+        : 'Checkpoint checked in!';
+      await this.notificationsService.create(this.db, userId, 'checkpoint',
+        `+${result.xp_awarded} XP earned!`, body, '📍');
+    }
+    if (result.quest_complete) {
+      const [q] = await this.db
+        .select({ title: quests.title })
+        .from(quests)
+        .where(eq(quests.id, questId))
+        .limit(1);
+      await this.notificationsService.create(this.db, userId, 'quest_complete',
+        '🎉 Quest Complete!',
+        `You finished "${q?.title ?? 'the quest'}"! Great work, Explorer!`, '🏁');
+    }
+    if (result.level_up) {
+      await this.notificationsService.create(this.db, userId, 'level_up',
+        `Level Up! → Level ${result.level_up.to}`,
+        `You advanced from Level ${result.level_up.from} to Level ${result.level_up.to}.`, '⬆️');
+    }
+    for (const badge of result.badges_unlocked ?? []) {
+      await this.notificationsService.create(this.db, userId, 'badge',
+        `Badge Unlocked: ${badge.name}`,
+        `You earned the ${badge.name} badge!`, '🏅');
+    }
   }
 
   private async recordFailedVisit(userId: string, checkpointId: string, dto: CheckInDto, reason: string) {

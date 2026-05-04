@@ -48,6 +48,7 @@ export const users = pgTable(
     xpTotal: integer('xp_total').notNull().default(0),
     level: integer('level').notNull().default(1),
     homeRegion: varchar('home_region', { length: 64 }),
+    activeDestinationId: uuid('active_destination_id').references(() => destinations.id, { onDelete: 'set null' }),
     role: varchar('role', { length: 16 }).notNull().default('tourist'),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
     lastSeenAt: timestamp('last_seen_at', { withTimezone: true }),
@@ -226,6 +227,24 @@ export const userBadges = pgTable(
     earnedAt: timestamp('earned_at', { withTimezone: true }).defaultNow(),
   },
   (t) => ({ pk: primaryKey({ columns: [t.userId, t.badgeId] }) }),
+);
+
+export const notifications = pgTable(
+  'notifications',
+  {
+    id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
+    userId: uuid('user_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
+    type: varchar('type', { length: 32 }).notNull(),
+    title: varchar('title', { length: 128 }).notNull(),
+    body: text('body').notNull(),
+    icon: varchar('icon', { length: 8 }),
+    isRead: boolean('is_read').notNull().default(false),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+  },
+  (t) => ({
+    userIdx: index('ix_notifications_user').on(t.userId),
+    unreadIdx: index('ix_notifications_unread').on(t.userId, t.isRead),
+  }),
 );
 
 export const refreshTokens = pgTable('refresh_tokens', {

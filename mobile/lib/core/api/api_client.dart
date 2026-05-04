@@ -4,14 +4,18 @@ import '../config.dart';
 
 const _storage = FlutterSecureStorage();
 
-Dio buildDio() {
+Dio? _instance;
+
+// Returns a shared Dio instance — avoids opening a new connection pool per widget.
+Dio buildDio() => _instance ??= _build();
+
+Dio _build() {
   final dio = Dio(BaseOptions(
     baseUrl: AppConfig.apiBaseUrl,
     connectTimeout: const Duration(seconds: 10),
     receiveTimeout: const Duration(seconds: 20),
     headers: {'Accept': 'application/json'},
   ));
-
   dio.interceptors.add(_AuthInterceptor(dio));
   return dio;
 }

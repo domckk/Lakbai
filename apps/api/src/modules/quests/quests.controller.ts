@@ -22,10 +22,10 @@ export class QuestsController {
     return this.quests.list(q);
   }
 
-  @Public()
+  @ApiBearerAuth()
   @Get(':id')
-  byId(@Param('id') id: string) {
-    return this.quests.findById(id);
+  byId(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    return this.quests.findById(id, user.sub);
   }
 
   @ApiBearerAuth()

@@ -9,11 +9,11 @@ class StampRevealSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final rarity = (stamp['rarity'] as String?) ?? 'common';
+    final rarity      = (stamp['rarity'] as String?) ?? 'common';
     final rarityColor = _rarityColor(rarity);
 
     return Container(
-      padding: const EdgeInsets.all(32),
+      padding: const EdgeInsets.fromLTRB(32, 24, 32, 32),
       decoration: const BoxDecoration(
         color: TrailColors.surface,
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
@@ -21,34 +21,53 @@ class StampRevealSheet extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Container(width: 40, height: 4, decoration: BoxDecoration(color: TrailColors.onSurfaceMuted.withOpacity(0.3), borderRadius: BorderRadius.circular(2))),
-          const SizedBox(height: 24),
+          Center(
+            child: Container(
+              width: 40, height: 4,
+              decoration: BoxDecoration(color: TrailColors.peach, borderRadius: BorderRadius.circular(2)),
+            ),
+          ),
+          const SizedBox(height: 28),
+
+          // Stamp icon
           Container(
             width: 120, height: 120,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               border: Border.all(color: rarityColor, width: 3),
-              color: rarityColor.withOpacity(0.12),
+              color: rarityColor.withOpacity(0.08),
+              boxShadow: [BoxShadow(color: rarityColor.withOpacity(0.2), blurRadius: 24, spreadRadius: 4)],
             ),
-            child: const Icon(Icons.auto_awesome_rounded, size: 56, color: TrailColors.accent),
+            child: Icon(Icons.auto_awesome_rounded, size: 52, color: rarityColor),
           ).animate().scale(begin: const Offset(0.2, 0.2), duration: 500.ms, curve: Curves.elasticOut),
-          const SizedBox(height: 16),
+
+          const SizedBox(height: 20),
+
+          // Rarity badge
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-            decoration: BoxDecoration(color: rarityColor.withOpacity(0.15), borderRadius: BorderRadius.circular(20)),
-            child: Text(rarity.toUpperCase(), style: TextStyle(color: rarityColor, fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 1.2)),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
+            decoration: BoxDecoration(color: rarityColor.withOpacity(0.1), borderRadius: BorderRadius.circular(20), border: Border.all(color: rarityColor.withOpacity(0.3))),
+            child: Text(rarity.toUpperCase(), style: TextStyle(color: rarityColor, fontSize: 11, fontWeight: FontWeight.w800, letterSpacing: 1.5)),
           ).animate().fadeIn(delay: 200.ms),
-          const SizedBox(height: 8),
+
+          const SizedBox(height: 12),
+
           Text(stamp['name'] ?? 'New Stamp', style: Theme.of(context).textTheme.titleLarge, textAlign: TextAlign.center).animate().fadeIn(delay: 300.ms),
+
           const SizedBox(height: 8),
-          Text('+$xp XP earned', style: TextStyle(color: TrailColors.accent, fontSize: 20, fontWeight: FontWeight.w700))
-              .animate().fadeIn(delay: 400.ms).slideY(begin: 0.3),
+
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            decoration: BoxDecoration(color: TrailColors.accent.withOpacity(0.1), borderRadius: BorderRadius.circular(20)),
+            child: Text('+$xp XP earned', style: const TextStyle(color: TrailColors.accent, fontSize: 18, fontWeight: FontWeight.w800)),
+          ).animate().fadeIn(delay: 400.ms).slideY(begin: 0.3),
+
           const SizedBox(height: 32),
+
           FilledButton(
             onPressed: () => Navigator.of(context).pop(),
             child: const Text('Continue Quest'),
           ).animate().fadeIn(delay: 500.ms),
-          const SizedBox(height: 16),
         ],
       ),
     );
@@ -56,8 +75,9 @@ class StampRevealSheet extends StatelessWidget {
 
   Color _rarityColor(String r) => switch (r) {
     'legendary' => const Color(0xFFFFAF00),
-    'epic' => const Color(0xFF9333EA),
-    'rare' => const Color(0xFF3B82F6),
-    _ => TrailColors.onSurfaceMuted,
+    'epic'      => const Color(0xFF9333EA),
+    'rare'      => const Color(0xFF3B82F6),
+    'uncommon'  => const Color(0xFF22C55E),
+    _           => TrailColors.onSurfaceMuted,
   };
 }

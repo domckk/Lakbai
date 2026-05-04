@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/theme/colors.dart';
@@ -10,136 +11,167 @@ class OnboardingScreen extends StatefulWidget {
   State<OnboardingScreen> createState() => _OnboardingScreenState();
 }
 
-class _OnboardingScreenState extends State<OnboardingScreen> {
-  final _ctrl = PageController();
-  int _page = 0;
+class _OnboardingScreenState extends State<OnboardingScreen>
+    with SingleTickerProviderStateMixin {
+  // Drives the fade-out before we navigate away
+  late final AnimationController _exitCtrl = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 500),
+  );
+  late final Animation<double> _exitFade = Tween<double>(begin: 1, end: 0)
+      .animate(CurvedAnimation(parent: _exitCtrl, curve: Curves.easeInCubic));
 
-  static const _slides = [
-    _Slide(
-      emoji: '🗺️',
-      title: 'Travel.\nPlay.\nCollect.',
-      subtitle: 'Turn every destination into a living game.',
-    ),
-    _Slide(
-      emoji: '📍',
-      title: 'Complete\nMissions.',
-      subtitle: 'GPS check-ins, QR scans, food challenges — go beyond photos.',
-    ),
-    _Slide(
-      emoji: '🏆',
-      title: 'Earn Real\nRewards.',
-      subtitle: 'Stamps, badges, discounts — unlock them as you explore.',
-    ),
-  ];
+  @override
+  void initState() {
+    super.initState();
+    // Hide status bar for a true full-screen splash
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+    // Trigger the exit after enter animations have finished playing
+    Future.delayed(const Duration(milliseconds: 2400), _exit);
+  }
+
+  @override
+  void dispose() {
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+    _exitCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _exit() async {
+    if (!mounted) return;
+    await _exitCtrl.forward();
+    if (mounted) context.go('/login');
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: TrailColors.background,
-      body: SafeArea(
-        child: Column(
-          children: [
-            Expanded(
-              child: PageView.builder(
-                controller: _ctrl,
-                onPageChanged: (p) => setState(() => _page = p),
-                itemCount: _slides.length,
-                itemBuilder: (_, i) => _SlideView(slide: _slides[i]),
-              ),
-            ),
-            _DotsRow(count: _slides.length, current: _page),
-            const SizedBox(height: 24),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: Column(
-                children: [
-                  FilledButton(
-                    onPressed: () => context.go('/login'),
-                    child: const Text('Get Started'),
+    return FadeTransition(
+      opacity: _exitFade,
+      child: Scaffold(
+        backgroundColor: TrailColors.brown,
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Spacer(),
+
+              // ── App icon — springs in from a tiny dot ──────────────────
+              Image.asset(
+                'assets/images/icon.png',
+                width: 150,
+                height: 150,
+                errorBuilder: (_, __, ___) => const Icon(
+                  Icons.explore_rounded,
+                  size: 120,
+                  color: Colors.white,
+                ),
+              )
+                  .animate()
+                  .scale(
+                    begin: const Offset(0.1, 0.1),
+                    end: const Offset(1, 1),
+                    duration: 750.ms,
+                    curve: Curves.elasticOut,
                   )
-                      .animate()
-                      .fadeIn(duration: 400.ms)
-                      .slideY(begin: 0.3, end: 0),
-                  const SizedBox(height: 12),
-                  TextButton(
-                    onPressed: () => context.go('/login'),
-                    child: Text('I already have an account',
-                        style: TextStyle(color: TrailColors.onSurfaceMuted)),
+                  .fadeIn(duration: 250.ms)
+                  // Subtle shimmer after the spring settles
+                  .then(delay: 200.ms)
+                  .shimmer(
+                    duration: 900.ms,
+                    color: Colors.white.withValues(alpha: 0.25),
+                    angle: 0.3,
                   ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 32),
-          ],
+
+              const SizedBox(height: 28),
+
+              // ── App name ───────────────────────────────────────────────
+              const Text(
+                'TrailQuest',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 34,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 0.5,
+                ),
+              )
+                  .animate()
+                  .fadeIn(delay: 350.ms, duration: 450.ms)
+                  .slideY(begin: 0.25, end: 0, curve: Curves.easeOutCubic),
+
+              const SizedBox(height: 8),
+
+              // ── Tagline ────────────────────────────────────────────────
+              Text(
+                'Discover. Explore. Conquer.',
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.65),
+                  fontSize: 14,
+                  fontWeight: FontWeight.w400,
+                  letterSpacing: 0.3,
+                ),
+              )
+                  .animate()
+                  .fadeIn(delay: 550.ms, duration: 400.ms),
+
+              const Spacer(),
+
+              // ── Loading dots at the bottom ─────────────────────────────
+              Padding(
+                padding: const EdgeInsets.only(bottom: 52),
+                child: _PulsingDots(),
+              )
+                  .animate()
+                  .fadeIn(delay: 900.ms, duration: 400.ms),
+            ],
+          ),
         ),
       ),
     );
   }
 }
 
-class _Slide {
-  const _Slide({required this.emoji, required this.title, required this.subtitle});
-  final String emoji, title, subtitle;
+// ── Three softly pulsing dots to hint that the app is loading ─────────────
+
+class _PulsingDots extends StatefulWidget {
+  @override
+  State<_PulsingDots> createState() => _PulsingDotsState();
 }
 
-class _SlideView extends StatelessWidget {
-  const _SlideView({required this.slide});
-  final _Slide slide;
+class _PulsingDotsState extends State<_PulsingDots>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 900),
+  )..repeat(reverse: true);
 
   @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 48),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(slide.emoji, style: const TextStyle(fontSize: 72))
-              .animate()
-              .fadeIn(duration: 600.ms)
-              .scale(begin: const Offset(0.6, 0.6)),
-          const SizedBox(height: 32),
-          Text(slide.title,
-              style: Theme.of(context).textTheme.displayMedium?.copyWith(
-                    height: 1.1,
-                    color: TrailColors.onBackground,
-                  ))
-              .animate()
-              .fadeIn(delay: 100.ms, duration: 500.ms)
-              .slideX(begin: -0.2),
-          const SizedBox(height: 16),
-          Text(slide.subtitle,
-              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                    color: TrailColors.onSurfaceMuted,
-                    height: 1.5,
-                  ))
-              .animate()
-              .fadeIn(delay: 200.ms, duration: 500.ms),
-        ],
-      ),
-    );
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
   }
-}
-
-class _DotsRow extends StatelessWidget {
-  const _DotsRow({required this.count, required this.current});
-  final int count, current;
 
   @override
   Widget build(BuildContext context) {
     return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: List.generate(count, (i) {
-        final active = i == current;
-        return AnimatedContainer(
-          duration: 250.ms,
-          margin: const EdgeInsets.symmetric(horizontal: 4),
-          width: active ? 24 : 8,
-          height: 8,
-          decoration: BoxDecoration(
-            color: active ? TrailColors.primary : TrailColors.onSurfaceMuted.withOpacity(0.4),
-            borderRadius: BorderRadius.circular(4),
-          ),
+      mainAxisSize: MainAxisSize.min,
+      children: List.generate(3, (i) {
+        return AnimatedBuilder(
+          animation: _ctrl,
+          builder: (_, __) {
+            // Stagger each dot by 200ms
+            final offset = (i * 0.25).clamp(0.0, 1.0);
+            final t = ((_ctrl.value - offset).abs() % 1.0);
+            final opacity = 0.3 + 0.7 * (1 - t);
+            return Container(
+              margin: const EdgeInsets.symmetric(horizontal: 4),
+              width: 6,
+              height: 6,
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: opacity.clamp(0.3, 1.0)),
+                shape: BoxShape.circle,
+              ),
+            );
+          },
         );
       }),
     );

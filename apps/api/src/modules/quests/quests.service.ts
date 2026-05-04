@@ -34,26 +34,38 @@ export class QuestsService {
       .orderBy(asc(quests.difficulty));
   }
 
-  async findById(id: string) {
+  async findById(id: string, userId?: string) {
     const [quest] = await this.db.select().from(quests).where(eq(quests.id, id)).limit(1);
     if (!quest) throw new NotFoundException('Quest not found');
-    const cps = await this.db
-      .select({
-        id: checkpoints.id,
-        sortOrder: checkpoints.sortOrder,
-        title: checkpoints.title,
-        description: checkpoints.description,
-        validationType: checkpoints.validationType,
-        geoRadiusM: checkpoints.geoRadiusM,
-        xpReward: checkpoints.xpReward,
-        // expose lat/lng so the mobile map can render it; geoPoint stays internal
-        lat: sql<number>`ST_Y(${checkpoints.geoPoint}::geometry)`,
-        lng: sql<number>`ST_X(${checkpoints.geoPoint}::geometry)`,
-      })
-      .from(checkpoints)
-      .where(eq(checkpoints.questId, id))
-      .orderBy(asc(checkpoints.sortOrder));
-    return { ...quest, checkpoints: cps };
+
+    const [cps, uqRows] = await Promise.all([
+      this.db
+        .select({
+          id: checkpoints.id,
+          sortOrder: checkpoints.sortOrder,
+          title: checkpoints.title,
+          description: checkpoints.description,
+          validationType: checkpoints.validationType,
+          geoRadiusM: checkpoints.geoRadiusM,
+          xpReward: checkpoints.xpReward,
+          lat: sql<number>`ST_Y(${checkpoints.geoPoint}::geometry)`,
+          lng: sql<number>`ST_X(${checkpoints.geoPoint}::geometry)`,
+        })
+        .from(checkpoints)
+        .where(eq(checkpoints.questId, id))
+        .orderBy(asc(checkpoints.sortOrder)),
+
+      userId
+        ? this.db
+            .select({ status: userQuests.status })
+            .from(userQuests)
+            .where(and(eq(userQuests.questId, id), eq(userQuests.userId, userId)))
+            .limit(1)
+        : Promise.resolve([] as { status: string }[]),
+    ]);
+
+    const userQuestStatus = (uqRows as { status: string }[])[0]?.status ?? null;
+    return { ...quest, checkpoints: cps, userQuestStatus };
   }
 
   async start(userId: string, questId: string) {

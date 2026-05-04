@@ -15,6 +15,7 @@ import { RewardsModule } from './modules/rewards/rewards.module';
 import { LeaderboardsModule } from './modules/leaderboards/leaderboards.module';
 import { ProgressionModule } from './modules/progression/progression.module';
 import { BadgesModule } from './modules/badges/badges.module';
+import { NotificationsModule } from './modules/notifications/notifications.module';
 import { HealthController } from './health.controller';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 
@@ -38,6 +39,7 @@ import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
     LeaderboardsModule,
     ProgressionModule,
     BadgesModule,
+    NotificationsModule,
   ],
   controllers: [HealthController],
   providers: [
