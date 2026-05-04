@@ -19,6 +19,20 @@ subprojects {
     project.evaluationDependsOn(":app")
 }
 
+// Workaround: older plugins (e.g. geolocator_android 4.6.x) reference
+// `flutter.compileSdkVersion` which isn't available in library subprojects.
+// Explicitly setting compileSdk here covers those plugins.
+subprojects {
+    afterEvaluate {
+        if (extensions.findByName("android") != null) {
+            val androidExt = extensions.getByName("android")
+            if (androidExt is com.android.build.gradle.LibraryExtension) {
+                androidExt.compileSdk = 35
+            }
+        }
+    }
+}
+
 tasks.register<Delete>("clean") {
     delete(rootProject.layout.buildDirectory)
 }
