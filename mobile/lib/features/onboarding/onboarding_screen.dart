@@ -84,22 +84,6 @@ class _OnboardingScreenState extends State<OnboardingScreen>
 
               const SizedBox(height: 28),
 
-              // ── App name ───────────────────────────────────────────────
-              const Text(
-                'Lakbai',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 34,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: 0.5,
-                ),
-              )
-                  .animate()
-                  .fadeIn(delay: 350.ms, duration: 450.ms)
-                  .slideY(begin: 0.25, end: 0, curve: Curves.easeOutCubic),
-
-              const SizedBox(height: 8),
-
               // ── Tagline ────────────────────────────────────────────────
               Text(
                 'Discover. Explore. Conquer.',
